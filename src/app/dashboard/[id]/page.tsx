@@ -1,0 +1,200 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { supabaseAdmin } from "@/lib/supabase";
+import { displayPhone } from "@/lib/phone";
+import { STATUSES, type Status } from "@/lib/constants";
+import { addNote, updateStatus, uploadAttachment } from "./actions";
+import AttachmentLink from "@/components/AttachmentLink";
+
+export const dynamic = "force-dynamic";
+
+export default async function TicketPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const db = supabaseAdmin();
+
+  const { data: ticket } = await db
+    .from("tickets")
+    .select("*, customers(id, name, phone)")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!ticket) notFound();
+  const customer = Array.isArray(ticket.customers)
+    ? ticket.customers[0]
+    : ticket.customers;
+
+  const [{ data: notes }, { data: attachments }, { data: previous }] =
+    await Promise.all([
+      db.from("notes").select("*").eq("ticket_id", id).order("created_at"),
+      db.from("attachments").select("*").eq("ticket_id", id).order("created_at"),
+      // קישור פניות קודמות: כל הפניות של אותו לקוח
+      db
+        .from("tickets")
+        .select("id, subject, status, created_at")
+        .eq("customer_id", customer.id)
+        .neq("id", id)
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+  const st = STATUSES[ticket.status as Status];
+
+  return (
+    <main className="max-w-4xl mx-auto px-4 py-8">
+      <Link href="/dashboard" className="text-sm text-stone-500 hover:underline">
+        → חזרה לכל הפניות
+      </Link>
+
+      <div className="bg-white rounded-2xl border border-stone-200 p-6 mt-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-bold">{ticket.subject}</h1>
+          <span className={`text-xs px-2.5 py-0.5 rounded-full ring-1 ${st.classes}`}>
+            {st.label}
+          </span>
+          <span className="text-xs text-stone-400 bg-stone-100 px-2 py-0.5 rounded">
+            {ticket.category}
+          </span>
+        </div>
+
+        <p className="text-sm text-stone-500 mt-2">
+          {customer?.name ?? "לקוח ללא שם"} ·{" "}
+          <span dir="ltr">{displayPhone(customer?.phone ?? "")}</span> · נפתחה{" "}
+          {new Date(ticket.created_at).toLocaleString("he-IL")}
+        </p>
+
+        {/* שינוי סטטוס */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {(Object.keys(STATUSES) as Status[]).map((s) => (
+            <form key={s} action={updateStatus.bind(null, ticket.id, s)}>
+              <button
+                disabled={s === ticket.status}
+                className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                  s === ticket.status
+                    ? "bg-stone-800 text-white border-stone-800"
+                    : "bg-white border-stone-300 hover:border-stone-500"
+                }`}
+              >
+                {STATUSES[s].label}
+              </button>
+            </form>
+          ))}
+        </div>
+
+        {/* סיכום השיחה */}
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-stone-500 mb-2">
+            סיכום השיחה מהמזכירה
+          </h2>
+          <p className="bg-stone-50 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
+            {ticket.call_summary ?? "אין סיכום לשיחה זו."}
+          </p>
+          {ticket.call_recording_url && (
+            <a
+              href={ticket.call_recording_url}
+              className="text-sm text-sky-700 hover:underline mt-2 inline-block"
+              target="_blank"
+            >
+              האזנה להקלטת השיחה
+            </a>
+          )}
+        </section>
+
+        {/* פניות קודמות של הלקוח */}
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-stone-500 mb-2">
+            פניות קודמות של הלקוח ({previous?.length ?? 0})
+          </h2>
+          {previous?.length ? (
+            <ul className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
+              {previous.map((p) => (
+                <li key={p.id}>
+                  <Link
+                    href={`/dashboard/${p.id}`}
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 text-sm"
+                  >
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
+                        STATUSES[p.status as Status].classes
+                      }`}
+                    >
+                      {STATUSES[p.status as Status].label}
+                    </span>
+                    <span>{p.subject}</span>
+                    <span className="ms-auto text-stone-400" dir="ltr">
+                      {new Date(p.created_at).toLocaleDateString("he-IL")}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-stone-400">זו הפנייה הראשונה של הלקוח.</p>
+          )}
+        </section>
+
+        {/* הערות */}
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-stone-500 mb-2">הערות</h2>
+          <ul className="space-y-2">
+            {notes?.map((n) => (
+              <li key={n.id} className="bg-amber-50 rounded-xl p-3 text-sm">
+                <p className="whitespace-pre-wrap">{n.content}</p>
+                <p className="text-xs text-stone-400 mt-1">
+                  {n.author} · {new Date(n.created_at).toLocaleString("he-IL")}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <form action={addNote.bind(null, ticket.id)} className="mt-3 flex gap-2">
+            <input
+              name="content"
+              placeholder="הוסיפי הערה…"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm"
+              required
+            />
+            <button className="bg-stone-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-stone-700">
+              הוספת הערה
+            </button>
+          </form>
+        </section>
+
+        {/* קבצים */}
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-stone-500 mb-2">קבצים מצורפים</h2>
+          <ul className="space-y-1">
+            {attachments?.map((a) => (
+              <li key={a.id}>
+                <AttachmentLink
+                  storagePath={a.storage_path}
+                  fileName={a.file_name}
+                  sizeBytes={a.size_bytes}
+                />
+              </li>
+            ))}
+            {!attachments?.length && (
+              <li className="text-sm text-stone-400">אין קבצים מצורפים.</li>
+            )}
+          </ul>
+          <form
+            action={uploadAttachment.bind(null, ticket.id)}
+            className="mt-3 flex items-center gap-2"
+          >
+            <input
+              type="file"
+              name="file"
+              required
+              className="text-sm file:me-3 file:rounded-lg file:border-0 file:bg-stone-200 file:px-3 file:py-1.5 file:text-sm hover:file:bg-stone-300"
+            />
+            <button className="bg-stone-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-stone-700">
+              העלאת קובץ
+            </button>
+          </form>
+        </section>
+      </div>
+    </main>
+  );
+}
