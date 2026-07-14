@@ -89,7 +89,12 @@ export default async function Dashboard({
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end items-center gap-3 mb-2">
+        {!userCategory && (
+          <Link href="/dashboard/staff" className="text-sm text-stone-500 hover:text-stone-800 underline">
+            ניהול צוות
+          </Link>
+        )}
         <form action={logout} className="flex items-center gap-2 text-sm text-stone-500">
           {userEmail && <span>מחוברת כ-{userEmail}</span>}
           <button type="submit" className="underline hover:text-stone-800">
