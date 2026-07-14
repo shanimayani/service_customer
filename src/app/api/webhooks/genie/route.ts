@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
+import { classifyCall } from "@/lib/classifyCall";
 
 /**
  * POST /api/webhooks/genie
@@ -84,14 +85,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "db error" }, { status: 500 });
   }
 
+  // --- סיווג AI: כותרת, קטגוריה, והאם נדרש טיפול אנושי ---
+  const classification = await classifyCall(body.summary, body.transcript);
+
   // --- יצירת פנייה, idempotent לפי callId ---
   const { data: ticket, error: tickErr } = await db
     .from("tickets")
     .upsert(
       {
         customer_id: customer.id,
-        subject: subjectFromSummary(body.summary),
-        category: "כללי", // כאן ייכנס בהמשך סיווג AI
+        subject: classification.subject,
+        category: classification.category,
+        status: classification.resolved ? "auto_closed" : "new",
         source: "genie",
         call_summary: body.summary,
         call_transcript: body.transcript,
@@ -110,15 +115,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, ticketId: ticket?.id ?? null });
-}
-
-/**
- * גזירת נושא קריא מהסיכום: המשפט הראשון, עד 60 תווים.
- * "הלקוח ביקש הצעת מחיר לשירות X" → נושא מצוין כמו שהוא.
- */
-function subjectFromSummary(summary: string | null): string {
-  if (!summary?.trim()) return "פנייה טלפונית חדשה";
-  const firstSentence = summary.split(/[.\n!?]/)[0].trim();
-  const base = firstSentence || summary.trim();
-  return base.length > 60 ? base.slice(0, 57) + "…" : base;
 }
