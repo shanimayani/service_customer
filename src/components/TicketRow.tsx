@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { displayPhone } from "@/lib/phone";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
 import { updateStatus, updateCategory } from "@/app/dashboard/[id]/actions";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type Props = {
   ticket: {
@@ -21,6 +22,8 @@ type Props = {
 export default function TicketRow({ ticket, customer }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [pendingCategory, setPendingCategory] = useState<string | null>(null);
+  const categorySelectRef = useRef<HTMLSelectElement>(null);
   const st = STATUSES[ticket.status as Status];
 
   function stop(e: React.SyntheticEvent) {
@@ -56,17 +59,14 @@ export default function TicketRow({ ticket, customer }: Props) {
         </select>
         <span className="font-semibold">{ticket.subject}</span>
         <select
+          ref={categorySelectRef}
           value={ticket.category}
           disabled={isPending}
           onClick={stop}
           onChange={(e) => {
             const value = e.target.value;
             if (value === ticket.category) return;
-            if (!confirm(`להעביר את הפנייה לקטגוריית "${value}"?`)) {
-              e.target.value = ticket.category;
-              return;
-            }
-            startTransition(() => updateCategory(ticket.id, value));
+            setPendingCategory(value);
           }}
           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${categoryColor(ticket.category).badge}`}
         >
@@ -89,6 +89,23 @@ export default function TicketRow({ ticket, customer }: Props) {
         {customer?.name ?? "לקוח ללא שם"} ·{" "}
         <span dir="ltr">{displayPhone(customer?.phone ?? "")}</span>
       </p>
+
+      <ConfirmDialog
+        open={pendingCategory !== null}
+        title="שינוי קטגוריה"
+        message={`להעביר את הפנייה לקטגוריית "${pendingCategory}"?`}
+        pending={isPending}
+        onCancel={() => {
+          if (categorySelectRef.current) categorySelectRef.current.value = ticket.category;
+          setPendingCategory(null);
+        }}
+        onConfirm={() => {
+          const value = pendingCategory;
+          if (!value) return;
+          startTransition(() => updateCategory(ticket.id, value));
+          setPendingCategory(null);
+        }}
+      />
     </div>
   );
 }
