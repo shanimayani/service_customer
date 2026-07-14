@@ -1,32 +1,75 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
-import { displayPhone } from "@/lib/phone";
 import { STATUSES, CATEGORIES, type Status } from "@/lib/constants";
 import FilterBar from "@/components/FilterBar";
+import TicketRow from "@/components/TicketRow";
 
 export const dynamic = "force-dynamic";
 
-type Search = { status?: string; category?: string; q?: string };
+const PAGE_SIZE = 30;
+
+type Search = { status?: string; category?: string; q?: string; phone?: string; page?: string };
+
+/**
+ * כשללקוח יש כמה פניות פתוחות (חדשה/בטיפול) בו-זמנית — למשל כמה שיחות
+ * מאותו מספר טלפון על אותו נושא שעדיין לא טופל — מציגים בדשבורד רק את
+ * הפנייה הפתוחה הראשונה שלו; השאר נגישות דרך "פניות קודמות" בתוך הפנייה עצמה.
+ */
+function hideDuplicateOpenTickets<
+  T extends { id: string; customer_id: string; status: string; created_at: string }
+>(rows: T[]): T[] {
+  const openByCustomer = new Map<string, T[]>();
+  for (const t of rows) {
+    if (t.status === "new" || t.status === "in_progress") {
+      const arr = openByCustomer.get(t.customer_id) ?? [];
+      arr.push(t);
+      openByCustomer.set(t.customer_id, arr);
+    }
+  }
+
+  const hiddenIds = new Set<string>();
+  for (const arr of openByCustomer.values()) {
+    if (arr.length < 2) continue;
+    const sorted = [...arr].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    for (const extra of sorted.slice(1)) hiddenIds.add(extra.id);
+  }
+
+  return rows.filter((t) => !hiddenIds.has(t.id));
+}
 
 export default async function Dashboard({
   searchParams,
 }: {
   searchParams: Promise<Search>;
 }) {
-  const { status, category, q } = await searchParams;
+  const { status, category, q, phone, page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const db = supabaseAdmin();
+
+  const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
 
   let query = db
     .from("tickets")
-    .select("id, subject, category, status, created_at, call_summary, customers(name, phone)")
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .select(
+      "id, subject, category, status, created_at, call_summary, customer_id, customers!inner(name, phone)",
+      { count: "exact" }
+    )
+    .order("created_at", { ascending: false });
 
   if (status && status in STATUSES) query = query.eq("status", status);
   if (category) query = query.eq("category", category);
   if (q) query = query.or(`subject.ilike.%${q}%,call_summary.ilike.%${q}%`);
+  if (phoneDigits) query = query.ilike("customers.phone", `%${phoneDigits}%`);
 
-  const { data: tickets, error } = await query;
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  query = query.range(from, to);
+
+  const { data: rawTickets, error, count } = await query;
+  const tickets = rawTickets ? hideDuplicateOpenTickets(rawTickets) : rawTickets;
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
   // ספירות לפי סטטוס לכותרת
   const { data: allStatuses } = await db.from("tickets").select("status");
@@ -57,7 +100,7 @@ export default async function Dashboard({
 
       <FilterBar
         categories={CATEGORIES}
-        current={{ status, category, q }}
+        current={{ status, category, q, phone }}
       />
 
       {error && (
@@ -68,37 +111,10 @@ export default async function Dashboard({
 
       <ul className="mt-4 space-y-2">
         {tickets?.map((t) => {
-          const st = STATUSES[t.status as Status];
           const customer = Array.isArray(t.customers) ? t.customers[0] : t.customers;
           return (
             <li key={t.id}>
-              <Link
-                href={`/dashboard/${t.id}`}
-                className="block bg-white rounded-xl border border-stone-200 p-4 hover:border-stone-400 transition-colors"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full ring-1 ${st.classes}`}>
-                    {st.label}
-                  </span>
-                  <span className="font-semibold">{t.subject}</span>
-                  <span className="text-xs text-stone-400 bg-stone-100 px-2 py-0.5 rounded">
-                    {t.category}
-                  </span>
-                  <span className="ms-auto text-sm text-stone-500" dir="ltr">
-                    {new Date(t.created_at).toLocaleString("he-IL", {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </span>
-                </div>
-                <p className="text-sm text-stone-600 mt-2 line-clamp-2">
-                  {t.call_summary}
-                </p>
-                <p className="text-xs text-stone-400 mt-2">
-                  {customer?.name ?? "לקוח ללא שם"} ·{" "}
-                  <span dir="ltr">{displayPhone(customer?.phone ?? "")}</span>
-                </p>
-              </Link>
+              <TicketRow ticket={t} customer={customer ?? null} />
             </li>
           );
         })}
@@ -108,6 +124,43 @@ export default async function Dashboard({
           </li>
         )}
       </ul>
+
+      {totalPages > 1 && (
+        <nav className="flex items-center justify-center gap-2 mt-6 text-sm">
+          <Link
+            href={pageHref({ status, category, q, phone }, page - 1)}
+            aria-disabled={page <= 1}
+            className={`px-3 py-1.5 rounded-lg border border-stone-300 ${
+              page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-stone-100"
+            }`}
+          >
+            הקודם
+          </Link>
+          <span className="text-stone-500">
+            עמוד {page} מתוך {totalPages}
+          </span>
+          <Link
+            href={pageHref({ status, category, q, phone }, page + 1)}
+            aria-disabled={page >= totalPages}
+            className={`px-3 py-1.5 rounded-lg border border-stone-300 ${
+              page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-stone-100"
+            }`}
+          >
+            הבא
+          </Link>
+        </nav>
+      )}
     </main>
   );
+}
+
+function pageHref(current: Search, page: number): string {
+  const params = new URLSearchParams();
+  if (current.status) params.set("status", current.status);
+  if (current.category) params.set("category", current.category);
+  if (current.q) params.set("q", current.q);
+  if (current.phone) params.set("phone", current.phone);
+  if (page > 1) params.set("page", String(page));
+  const qs = params.toString();
+  return qs ? `/dashboard?${qs}` : "/dashboard";
 }

@@ -2,11 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { displayPhone } from "@/lib/phone";
-import { STATUSES, type Status } from "@/lib/constants";
-import { addNote, updateStatus, uploadAttachment } from "./actions";
+import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
+import { addNote, updateStatus, updateCategory, uploadAttachment } from "./actions";
 import AttachmentLink from "@/components/AttachmentLink";
+import EditableSubject from "@/components/EditableSubject";
+import PreviousTicketRow from "@/components/PreviousTicketRow";
 
 export const dynamic = "force-dynamic";
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export default async function TicketPage({
   params,
@@ -49,13 +57,13 @@ export default async function TicketPage({
         → חזרה לכל הפניות
       </Link>
 
-      <div className="bg-white rounded-2xl border border-stone-200 p-6 mt-3">
+      <div className={`bg-white rounded-2xl border-2 ${categoryColor(ticket.category).border} p-6 mt-3`}>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-bold">{ticket.subject}</h1>
+          <EditableSubject ticketId={ticket.id} subject={ticket.subject} />
           <span className={`text-xs px-2.5 py-0.5 rounded-full ring-1 ${st.classes}`}>
             {st.label}
           </span>
-          <span className="text-xs text-stone-400 bg-stone-100 px-2 py-0.5 rounded">
+          <span className={`text-xs px-2.5 py-0.5 rounded-full ring-1 ${categoryColor(ticket.category).badge}`}>
             {ticket.category}
           </span>
         </div>
@@ -63,7 +71,9 @@ export default async function TicketPage({
         <p className="text-sm text-stone-500 mt-2">
           {customer?.name ?? "לקוח ללא שם"} ·{" "}
           <span dir="ltr">{displayPhone(customer?.phone ?? "")}</span> · נפתחה{" "}
-          {new Date(ticket.created_at).toLocaleString("he-IL")}
+          {new Date(ticket.created_at).toLocaleString("he-IL", {
+            timeZone: "Asia/Jerusalem",
+          })}
         </p>
 
         {/* שינוי סטטוס */}
@@ -84,22 +94,71 @@ export default async function TicketPage({
           ))}
         </div>
 
+        {/* שינוי קטגוריה */}
+        <div className="flex flex-wrap gap-2 mt-2">
+          {CATEGORIES.map((c) => (
+            <form key={c} action={updateCategory.bind(null, ticket.id, c)}>
+              <button
+                disabled={c === ticket.category}
+                className={`text-xs px-2.5 py-1 rounded-lg ring-1 transition-colors ${
+                  c === ticket.category
+                    ? categoryColor(c).badge
+                    : "bg-white ring-stone-200 text-stone-500 hover:ring-stone-400"
+                }`}
+              >
+                {c}
+              </button>
+            </form>
+          ))}
+        </div>
+
         {/* סיכום השיחה */}
         <section className="mt-6">
-          <h2 className="text-sm font-semibold text-stone-500 mb-2">
-            סיכום השיחה מהמזכירה
-          </h2>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <h2 className="text-sm font-semibold text-stone-500">
+              סיכום השיחה מהמזכירה
+            </h2>
+            {ticket.source === "genie" && (
+              <span className="text-xs text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full ring-1 ring-violet-200">
+                נקלט אוטומטית מ-Genie
+              </span>
+            )}
+          </div>
           <p className="bg-stone-50 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
             {ticket.call_summary ?? "אין סיכום לשיחה זו."}
           </p>
-          {ticket.call_recording_url && (
-            <a
-              href={ticket.call_recording_url}
-              className="text-sm text-sky-700 hover:underline mt-2 inline-block"
-              target="_blank"
-            >
-              האזנה להקלטת השיחה
-            </a>
+          <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
+            {ticket.call_recording_url && (
+              <a
+                href={ticket.call_recording_url}
+                className="text-sky-700 hover:underline"
+                target="_blank"
+              >
+                האזנה להקלטת השיחה
+              </a>
+            )}
+            {ticket.call_duration_seconds != null && (
+              <span className="text-stone-400" dir="ltr">
+                משך שיחה: {formatDuration(ticket.call_duration_seconds)}
+              </span>
+            )}
+          </div>
+
+          {ticket.call_transcript && (
+            <details className="mt-3 group">
+              <summary className="text-sm text-stone-500 cursor-pointer hover:text-stone-800 select-none">
+                תמלול מלא של השיחה
+              </summary>
+              <p className="bg-stone-50 rounded-xl p-4 mt-2 leading-relaxed whitespace-pre-wrap text-sm">
+                {ticket.call_transcript}
+              </p>
+            </details>
+          )}
+
+          {ticket.genie_call_id && (
+            <p className="text-xs text-stone-300 mt-2" dir="ltr">
+              Genie call ID: {ticket.genie_call_id}
+            </p>
           )}
         </section>
 
@@ -112,22 +171,12 @@ export default async function TicketPage({
             <ul className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
               {previous.map((p) => (
                 <li key={p.id}>
-                  <Link
-                    href={`/dashboard/${p.id}`}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 text-sm"
-                  >
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ring-1 ${
-                        STATUSES[p.status as Status].classes
-                      }`}
-                    >
-                      {STATUSES[p.status as Status].label}
-                    </span>
-                    <span>{p.subject}</span>
-                    <span className="ms-auto text-stone-400" dir="ltr">
-                      {new Date(p.created_at).toLocaleDateString("he-IL")}
-                    </span>
-                  </Link>
+                  <PreviousTicketRow
+                    ticketId={p.id}
+                    subject={p.subject}
+                    status={p.status}
+                    createdAt={p.created_at}
+                  />
                 </li>
               ))}
             </ul>
@@ -144,7 +193,10 @@ export default async function TicketPage({
               <li key={n.id} className="bg-amber-50 rounded-xl p-3 text-sm">
                 <p className="whitespace-pre-wrap">{n.content}</p>
                 <p className="text-xs text-stone-400 mt-1">
-                  {n.author} · {new Date(n.created_at).toLocaleString("he-IL")}
+                  {n.author} ·{" "}
+                  {new Date(n.created_at).toLocaleString("he-IL", {
+                    timeZone: "Asia/Jerusalem",
+                  })}
                 </p>
               </li>
             ))}

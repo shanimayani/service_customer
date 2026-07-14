@@ -5,7 +5,40 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 export async function updateStatus(ticketId: string, status: string) {
   const db = supabaseAdmin();
-  await db.from("tickets").update({ status }).eq("id", ticketId);
+  const { data: updated } = await db
+    .from("tickets")
+    .update({ status })
+    .eq("id", ticketId)
+    .select("customer_id")
+    .single();
+
+  // סגירת פנייה סוגרת גם פניות פתוחות אחרות של אותו לקוח (למשל שיחות
+  // חוזרות שכבר הוסתרו מהדשבורד תחת הפנייה הזו) — כדי שלא יישארו תקועות.
+  if (updated && (status === "closed" || status === "auto_closed")) {
+    await db
+      .from("tickets")
+      .update({ status })
+      .eq("customer_id", updated.customer_id)
+      .neq("id", ticketId)
+      .in("status", ["new", "in_progress"]);
+  }
+
+  revalidatePath(`/dashboard/${ticketId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function updateSubject(ticketId: string, subject: string) {
+  const trimmed = subject.trim();
+  if (!trimmed) return;
+  const db = supabaseAdmin();
+  await db.from("tickets").update({ subject: trimmed }).eq("id", ticketId);
+  revalidatePath(`/dashboard/${ticketId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function updateCategory(ticketId: string, category: string) {
+  const db = supabaseAdmin();
+  await db.from("tickets").update({ category }).eq("id", ticketId);
   revalidatePath(`/dashboard/${ticketId}`);
   revalidatePath("/dashboard");
 }
@@ -43,6 +76,17 @@ export async function uploadAttachment(ticketId: string, formData: FormData) {
   });
 
   revalidatePath(`/dashboard/${ticketId}`);
+}
+
+/** פרטי תצוגה מקדימה של פנייה, לחלון הקטן שנפתח מתוך "פניות קודמות" */
+export async function getTicketPreview(ticketId: string) {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from("tickets")
+    .select("id, subject, status, category, created_at, call_summary")
+    .eq("id", ticketId)
+    .maybeSingle();
+  return data;
 }
 
 /** מחזיר קישור חתום זמני להורדת קובץ מה-bucket הפרטי */

@@ -5,7 +5,7 @@ import { STATUSES, type Status } from "@/lib/constants";
 
 type Props = {
   categories: string[];
-  current: { status?: string; category?: string; q?: string };
+  current: { status?: string; category?: string; q?: string; phone?: string };
 };
 
 export default function FilterBar({ categories, current }: Props) {
@@ -18,6 +18,7 @@ export default function FilterBar({ categories, current }: Props) {
     if (next.status) params.set("status", next.status);
     if (next.category) params.set("category", next.category);
     if (next.q) params.set("q", next.q);
+    if (next.phone) params.set("phone", next.phone);
     router.push(`${pathname}?${params.toString()}`);
   }
 
@@ -60,7 +61,19 @@ export default function FilterBar({ categories, current }: Props) {
         className="flex-1 min-w-48 rounded-lg border border-stone-300 px-3 py-1.5 text-sm"
       />
 
-      {(current.status || current.category || current.q) && (
+      <input
+        type="search"
+        dir="ltr"
+        placeholder="חיפוש לפי טלפון…"
+        defaultValue={current.phone ?? ""}
+        onKeyDown={(e) => {
+          if (e.key === "Enter")
+            update({ phone: (e.target as HTMLInputElement).value || undefined });
+        }}
+        className="w-40 rounded-lg border border-stone-300 px-3 py-1.5 text-sm"
+      />
+
+      {(current.status || current.category || current.q || current.phone) && (
         <button
           onClick={() => router.push(pathname)}
           className="text-sm text-stone-500 hover:text-stone-800 underline"
