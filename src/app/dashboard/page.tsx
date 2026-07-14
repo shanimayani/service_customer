@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { logout } from "@/app/login/actions";
 import { STATUSES, CATEGORIES, type Status } from "@/lib/constants";
 import FilterBar from "@/components/FilterBar";
 import TicketRow from "@/components/TicketRow";
@@ -48,6 +50,10 @@ export default async function Dashboard({
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const db = supabaseAdmin();
 
+  const supabaseAuth = await createClient();
+  const { data: claimsData } = await supabaseAuth.auth.getClaims();
+  const userEmail = claimsData?.claims?.email as string | undefined;
+
   const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
 
   let query = db
@@ -78,6 +84,14 @@ export default async function Dashboard({
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex justify-end mb-2">
+        <form action={logout} className="flex items-center gap-2 text-sm text-stone-500">
+          {userEmail && <span>מחוברת כ-{userEmail}</span>}
+          <button type="submit" className="underline hover:text-stone-800">
+            התנתקות
+          </button>
+        </form>
+      </div>
       <header className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold">מוקד פניות</h1>
