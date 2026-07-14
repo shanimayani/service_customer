@@ -4,10 +4,11 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
 import { displayPhone } from "@/lib/phone";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
-import { addNote, updateStatus, updateCategory, uploadAttachment } from "./actions";
+import { addNote, updateCategory, uploadAttachment } from "./actions";
 import AttachmentLink from "@/components/AttachmentLink";
 import EditableSubject from "@/components/EditableSubject";
 import PreviousTicketRow from "@/components/PreviousTicketRow";
+import StatusButtons from "@/components/StatusButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -83,22 +84,7 @@ export default async function TicketPage({
         </p>
 
         {/* שינוי סטטוס */}
-        <div className="flex flex-wrap gap-2 mt-4">
-          {(Object.keys(STATUSES) as Status[]).map((s) => (
-            <form key={s} action={updateStatus.bind(null, ticket.id, s)}>
-              <button
-                disabled={s === ticket.status}
-                className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-                  s === ticket.status
-                    ? "bg-stone-800 text-white border-stone-800"
-                    : "bg-white border-stone-300 hover:border-stone-500"
-                }`}
-              >
-                {STATUSES[s].label}
-              </button>
-            </form>
-          ))}
-        </div>
+        <StatusButtons ticketId={ticket.id} currentStatus={ticket.status} />
 
         {/* שינוי קטגוריה */}
         <div className="flex flex-wrap gap-2 mt-2">

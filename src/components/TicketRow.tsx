@@ -43,7 +43,12 @@ export default function TicketRow({ ticket, customer }: Props) {
           disabled={isPending}
           onClick={stop}
           onChange={(e) => {
-            const value = e.target.value;
+            const value = e.target.value as Status;
+            if (value === ticket.status) return;
+            if (!confirm(`לשנות את סטטוס הפנייה ל"${STATUSES[value].label}"?`)) {
+              e.target.value = ticket.status;
+              return;
+            }
             startTransition(() => updateStatus(ticket.id, value));
           }}
           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${st.classes}`}
