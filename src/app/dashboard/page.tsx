@@ -126,7 +126,7 @@ export default async function Dashboard({
       </ul>
 
       {totalPages > 1 && (
-        <nav className="flex items-center justify-center gap-2 mt-6 text-sm">
+        <nav className="flex items-center justify-center gap-1.5 mt-6 text-sm flex-wrap">
           <Link
             href={pageHref({ status, category, q, phone }, page - 1)}
             aria-disabled={page <= 1}
@@ -136,9 +136,28 @@ export default async function Dashboard({
           >
             הקודם
           </Link>
-          <span className="text-stone-500">
-            עמוד {page} מתוך {totalPages}
-          </span>
+
+          {getPageNumbers(page, totalPages).map((p, i) =>
+            p === "..." ? (
+              <span key={`gap-${i}`} className="px-2 text-stone-400">
+                …
+              </span>
+            ) : (
+              <Link
+                key={p}
+                href={pageHref({ status, category, q, phone }, p)}
+                aria-current={p === page ? "page" : undefined}
+                className={`px-3 py-1.5 rounded-lg border ${
+                  p === page
+                    ? "border-stone-800 bg-stone-800 text-white"
+                    : "border-stone-300 hover:bg-stone-100"
+                }`}
+              >
+                {p}
+              </Link>
+            )
+          )}
+
           <Link
             href={pageHref({ status, category, q, phone }, page + 1)}
             aria-disabled={page >= totalPages}
@@ -152,6 +171,21 @@ export default async function Dashboard({
       )}
     </main>
   );
+}
+
+/** מחזיר את מספרי העמודים שיוצגו בפאגינציה, עם "..." לדילוגים */
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  const pages = new Set<number>([1, total, current, current - 1, current + 1]);
+  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+
+  const result: (number | "...")[] = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) result.push("...");
+    result.push(p);
+    prev = p;
+  }
+  return result;
 }
 
 function pageHref(current: Search, page: number): string {
