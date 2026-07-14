@@ -53,6 +53,8 @@ export default async function Dashboard({
   const supabaseAuth = await createClient();
   const { data: claimsData } = await supabaseAuth.auth.getClaims();
   const userEmail = claimsData?.claims?.email as string | undefined;
+  const userCategory = (claimsData?.claims?.app_metadata as { category?: string } | undefined)
+    ?.category;
 
   const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
 
@@ -65,7 +67,8 @@ export default async function Dashboard({
     .order("created_at", { ascending: false });
 
   if (status && status in STATUSES) query = query.eq("status", status);
-  if (category) query = query.eq("category", category);
+  if (userCategory) query = query.eq("category", userCategory);
+  else if (category) query = query.eq("category", category);
   if (q) query = query.or(`subject.ilike.%${q}%,call_summary.ilike.%${q}%`);
   if (phoneDigits) query = query.ilike("customers.phone", `%${phoneDigits}%`);
 
@@ -77,8 +80,10 @@ export default async function Dashboard({
   const tickets = rawTickets ? hideDuplicateOpenTickets(rawTickets) : rawTickets;
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
-  // ספירות לפי סטטוס לכותרת
-  const { data: allStatuses } = await db.from("tickets").select("status");
+  // ספירות לפי סטטוס לכותרת (מוגבל לקטגוריה של המשתמש, אם יש)
+  let statusCountsQuery = db.from("tickets").select("status");
+  if (userCategory) statusCountsQuery = statusCountsQuery.eq("category", userCategory);
+  const { data: allStatuses } = await statusCountsQuery;
   const counts: Record<string, number> = {};
   for (const t of allStatuses ?? []) counts[t.status] = (counts[t.status] ?? 0) + 1;
 
@@ -115,6 +120,7 @@ export default async function Dashboard({
       <FilterBar
         categories={CATEGORIES}
         current={{ status, category, q, phone }}
+        lockedCategory={userCategory}
       />
 
       {error && (

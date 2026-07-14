@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getUserCategory } from "@/lib/auth";
 import { displayPhone } from "@/lib/phone";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
 import { addNote, updateStatus, updateCategory, uploadAttachment } from "./actions";
@@ -23,6 +24,7 @@ export default async function TicketPage({
 }) {
   const { id } = await params;
   const db = supabaseAdmin();
+  const userCategory = await getUserCategory();
 
   const { data: ticket } = await db
     .from("tickets")
@@ -31,22 +33,26 @@ export default async function TicketPage({
     .maybeSingle();
 
   if (!ticket) notFound();
+  if (userCategory && ticket.category !== userCategory) notFound();
   const customer = Array.isArray(ticket.customers)
     ? ticket.customers[0]
     : ticket.customers;
+
+  let previousQuery = db
+    .from("tickets")
+    .select("id, subject, status, created_at")
+    .eq("customer_id", customer.id)
+    .neq("id", id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (userCategory) previousQuery = previousQuery.eq("category", userCategory);
 
   const [{ data: notes }, { data: attachments }, { data: previous }] =
     await Promise.all([
       db.from("notes").select("*").eq("ticket_id", id).order("created_at"),
       db.from("attachments").select("*").eq("ticket_id", id).order("created_at"),
-      // קישור פניות קודמות: כל הפניות של אותו לקוח
-      db
-        .from("tickets")
-        .select("id, subject, status, created_at")
-        .eq("customer_id", customer.id)
-        .neq("id", id)
-        .order("created_at", { ascending: false })
-        .limit(10),
+      // קישור פניות קודמות: כל הפניות של אותו לקוח (מוגבל לקטגוריה של המשתמש, אם יש)
+      previousQuery,
     ]);
 
   const st = STATUSES[ticket.status as Status];

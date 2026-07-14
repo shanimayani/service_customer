@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { STATUSES, type Status } from "@/lib/constants";
+import { STATUSES, categoryColor, type Status } from "@/lib/constants";
 
 type Props = {
   categories: string[];
   current: { status?: string; category?: string; q?: string; phone?: string };
+  /** אם קיים, המשתמש מוגבל לקטגוריה אחת — מציגים תג קבוע במקום בחירה */
+  lockedCategory?: string;
 };
 
-export default function FilterBar({ categories, current }: Props) {
+export default function FilterBar({ categories, current, lockedCategory }: Props) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -37,18 +39,26 @@ export default function FilterBar({ categories, current }: Props) {
         ))}
       </select>
 
-      <select
-        value={current.category ?? ""}
-        onChange={(e) => update({ category: e.target.value || undefined })}
-        className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm bg-white"
-      >
-        <option value="">כל הנושאים</option>
-        {categories.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
+      {lockedCategory ? (
+        <span
+          className={`text-sm px-3 py-1.5 rounded-lg ring-1 ${categoryColor(lockedCategory).badge}`}
+        >
+          {lockedCategory}
+        </span>
+      ) : (
+        <select
+          value={current.category ?? ""}
+          onChange={(e) => update({ category: e.target.value || undefined })}
+          className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm bg-white"
+        >
+          <option value="">כל הנושאים</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      )}
 
       <input
         type="search"
