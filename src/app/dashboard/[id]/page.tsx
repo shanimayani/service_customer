@@ -4,11 +4,11 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
 import { displayPhone } from "@/lib/phone";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
-import { addNote, updateCategory, uploadAttachment } from "./actions";
+import { addNote, updateStatus, uploadAttachment } from "./actions";
 import AttachmentLink from "@/components/AttachmentLink";
 import EditableSubject from "@/components/EditableSubject";
 import PreviousTicketRow from "@/components/PreviousTicketRow";
-import StatusButtons from "@/components/StatusButtons";
+import CategoryButtons from "@/components/CategoryButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -84,25 +84,25 @@ export default async function TicketPage({
         </p>
 
         {/* שינוי סטטוס */}
-        <StatusButtons ticketId={ticket.id} currentStatus={ticket.status} />
-
-        {/* שינוי קטגוריה */}
-        <div className="flex flex-wrap gap-2 mt-2">
-          {CATEGORIES.map((c) => (
-            <form key={c} action={updateCategory.bind(null, ticket.id, c)}>
+        <div className="flex flex-wrap gap-2 mt-4">
+          {(Object.keys(STATUSES) as Status[]).map((s) => (
+            <form key={s} action={updateStatus.bind(null, ticket.id, s)}>
               <button
-                disabled={c === ticket.category}
-                className={`text-xs px-2.5 py-1 rounded-lg ring-1 transition-colors ${
-                  c === ticket.category
-                    ? categoryColor(c).badge
-                    : "bg-white ring-stone-200 text-stone-500 hover:ring-stone-400"
+                disabled={s === ticket.status}
+                className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+                  s === ticket.status
+                    ? "bg-stone-800 text-white border-stone-800"
+                    : "bg-white border-stone-300 hover:border-stone-500"
                 }`}
               >
-                {c}
+                {STATUSES[s].label}
               </button>
             </form>
           ))}
         </div>
+
+        {/* שינוי קטגוריה */}
+        <CategoryButtons ticketId={ticket.id} currentCategory={ticket.category} />
 
         {/* סיכום השיחה */}
         <section className="mt-6">

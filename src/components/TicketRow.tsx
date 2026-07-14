@@ -43,12 +43,7 @@ export default function TicketRow({ ticket, customer }: Props) {
           disabled={isPending}
           onClick={stop}
           onChange={(e) => {
-            const value = e.target.value as Status;
-            if (value === ticket.status) return;
-            if (!confirm(`לשנות את סטטוס הפנייה ל"${STATUSES[value].label}"?`)) {
-              e.target.value = ticket.status;
-              return;
-            }
+            const value = e.target.value;
             startTransition(() => updateStatus(ticket.id, value));
           }}
           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${st.classes}`}
@@ -66,6 +61,11 @@ export default function TicketRow({ ticket, customer }: Props) {
           onClick={stop}
           onChange={(e) => {
             const value = e.target.value;
+            if (value === ticket.category) return;
+            if (!confirm(`להעביר את הפנייה לקטגוריית "${value}"?`)) {
+              e.target.value = ticket.category;
+              return;
+            }
             startTransition(() => updateCategory(ticket.id, value));
           }}
           className={`text-xs px-2 py-0.5 rounded-full ring-1 ${categoryColor(ticket.category).badge}`}
