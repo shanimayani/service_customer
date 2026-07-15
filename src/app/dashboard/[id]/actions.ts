@@ -60,6 +60,21 @@ export async function updateCategory(ticketId: string, category: string) {
   revalidatePath("/dashboard");
 }
 
+export async function updateCustomer(
+  ticketId: string,
+  customerId: string,
+  data: { name: string; email: string }
+) {
+  const db = supabaseAdmin();
+  await assertTicketAccess(db, ticketId);
+  await db
+    .from("customers")
+    .update({ name: data.name.trim() || null, email: data.email.trim() || null })
+    .eq("id", customerId);
+  revalidatePath(`/dashboard/${ticketId}`);
+  revalidatePath("/dashboard");
+}
+
 export async function addNote(ticketId: string, formData: FormData) {
   const content = String(formData.get("content") ?? "").trim();
   if (!content) return;

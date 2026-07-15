@@ -110,7 +110,7 @@ export default async function Dashboard({
             {counts.new ? ` · ${counts.new} חדשות ממתינות` : ""}
           </p>
         </div>
-        <div className="flex gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm">
           {(Object.keys(STATUSES) as Status[]).map((s) => (
             <span
               key={s}
@@ -119,6 +119,12 @@ export default async function Dashboard({
               {STATUSES[s].label} · {counts[s] ?? 0}
             </span>
           ))}
+          <Link
+            href="/dashboard/new"
+            className="px-3 py-1.5 rounded-lg bg-stone-800 text-white hover:bg-stone-700"
+          >
+            + פנייה חדשה
+          </Link>
         </div>
       </header>
 

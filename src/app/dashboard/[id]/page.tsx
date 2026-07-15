@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
-import { displayPhone } from "@/lib/phone";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
 import { addNote, updateStatus, uploadAttachment } from "./actions";
 import AttachmentLink from "@/components/AttachmentLink";
 import EditableSubject from "@/components/EditableSubject";
+import EditableCustomerInfo from "@/components/EditableCustomerInfo";
 import PreviousTicketRow from "@/components/PreviousTicketRow";
 import CategoryButtons from "@/components/CategoryButtons";
 import BackToListLink from "@/components/BackToListLink";
@@ -29,7 +29,7 @@ export default async function TicketPage({
 
   const { data: ticket } = await db
     .from("tickets")
-    .select("*, customers(id, name, phone)")
+    .select("*, customers(id, name, phone, email)")
     .eq("id", id)
     .maybeSingle();
 
@@ -73,9 +73,15 @@ export default async function TicketPage({
           </span>
         </div>
 
-        <p className="text-sm text-stone-500 mt-2">
-          {customer?.name ?? "לקוח ללא שם"} ·{" "}
-          <span dir="ltr">{displayPhone(customer?.phone ?? "")}</span> · נפתחה{" "}
+        <EditableCustomerInfo
+          ticketId={ticket.id}
+          customerId={customer.id}
+          name={customer?.name ?? null}
+          email={customer?.email ?? null}
+          phone={customer?.phone ?? null}
+        />
+        <p className="text-xs text-stone-400 mt-1">
+          נפתחה{" "}
           {new Date(ticket.created_at).toLocaleString("he-IL", {
             timeZone: "Asia/Jerusalem",
           })}
