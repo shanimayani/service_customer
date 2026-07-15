@@ -65,7 +65,10 @@ export default async function Dashboard({
   const userEmail = authUser?.email;
   const userCategory = (authUser?.app_metadata as { category?: string } | undefined)?.category;
 
-  const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
+  let phoneDigits = phone ? phone.replace(/\D/g, "") : "";
+  // מספרים בישראל נשמרים בפורמט 972... בלי ה-0 המוביל, אז מסירים אותו גם
+  // מהחיפוש (משתמשות בדרך כלל מקלידות 050... כמו שרגילות)
+  if (phoneDigits.startsWith("0")) phoneDigits = phoneDigits.slice(1);
 
   let query = db
     .from("tickets")
