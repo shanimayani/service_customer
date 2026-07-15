@@ -16,6 +16,10 @@ function fallbackSubject(summary: string | null): string {
   return base.length > 60 ? base.slice(0, 57) + "…" : base;
 }
 
+// שיחה שנותקה לפני שנמסרו פרטים — אין שום מידע לפעול לפיו, אז אין טעם
+// להשאיר אותה פתוחה לטיפול אנושי. תבנית קבועה שחוזרת בסיכומי Genie.
+const DISCONNECTED_BEFORE_DETAILS = "המתקשר ניתק לפני שהספקנו לקבל פרטים.";
+
 /**
  * מסווגת שיחה שהתקבלה מהמזכירה הוירטואלית: מנסחת כותרת קצרה, בוחרת קטגוריה
  * מתוך הרשימה הקבועה, וקובעת אם השיחה טופלה במלואה ואינה דורשת מעקב אנושי.
@@ -33,6 +37,10 @@ export async function classifyCall(
   };
 
   if (!summary?.trim() && !transcript?.trim()) return fallback;
+
+  if (summary?.trim() === DISCONNECTED_BEFORE_DETAILS) {
+    return { subject: "שיחה שנותקה לפני קבלת פרטים", category: "כללי", resolved: true };
+  }
 
   try {
     const response = await client.messages.create({
