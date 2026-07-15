@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { STATUSES, categoryColor, type Status } from "@/lib/constants";
+import CategoryMultiSelect from "@/components/CategoryMultiSelect";
 
 type Props = {
   categories: string[];
@@ -56,18 +57,11 @@ export default function FilterBar({ categories, current, lockedCategory }: Props
           {lockedCategory}
         </span>
       ) : (
-        <select
-          value={current.category ?? ""}
-          onChange={(e) => update({ category: e.target.value || undefined })}
-          className="rounded-lg border border-stone-300 px-3 py-1.5 text-sm bg-white"
-        >
-          <option value="">כל הנושאים</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <CategoryMultiSelect
+          categories={categories}
+          selected={current.category ? current.category.split(",") : []}
+          onChange={(selected) => update({ category: selected.length ? selected.join(",") : undefined })}
+        />
       )}
 
       <input

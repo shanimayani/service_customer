@@ -77,7 +77,7 @@ export default async function Dashboard({
 
   if (status && status in STATUSES) query = query.eq("status", status);
   if (userCategory) query = query.eq("category", userCategory);
-  else if (category) query = query.eq("category", category);
+  else if (category) query = query.in("category", category.split(","));
   if (q) query = query.or(`subject.ilike.%${q}%,call_summary.ilike.%${q}%`);
   if (phoneDigits) query = query.ilike("customers.phone", `%${phoneDigits}%`);
 
