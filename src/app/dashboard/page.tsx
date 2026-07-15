@@ -10,7 +10,15 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 30;
 
-type Search = { status?: string; category?: string; q?: string; phone?: string; page?: string };
+type Search = {
+  status?: string;
+  category?: string;
+  q?: string;
+  phone?: string;
+  from?: string;
+  to?: string;
+  page?: string;
+};
 
 /**
  * כשללקוח יש כמה פניות פתוחות (חדשה/בטיפול) בו-זמנית — למשל כמה שיחות
@@ -46,7 +54,7 @@ export default async function Dashboard({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const { status, category, q, phone, page: pageParam } = await searchParams;
+  const { status, category, q, phone, from, to, page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
   const db = supabaseAdmin();
 
@@ -73,9 +81,17 @@ export default async function Dashboard({
   if (q) query = query.or(`subject.ilike.%${q}%,call_summary.ilike.%${q}%`);
   if (phoneDigits) query = query.ilike("customers.phone", `%${phoneDigits}%`);
 
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  query = query.range(from, to);
+  const isValidDate = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  if (isValidDate(from)) query = query.gte("created_at", from);
+  if (isValidDate(to)) {
+    const dayAfter = new Date(to + "T00:00:00Z");
+    dayAfter.setUTCDate(dayAfter.getUTCDate() + 1);
+    query = query.lt("created_at", dayAfter.toISOString().slice(0, 10));
+  }
+
+  const rangeFrom = (page - 1) * PAGE_SIZE;
+  const rangeTo = rangeFrom + PAGE_SIZE - 1;
+  query = query.range(rangeFrom, rangeTo);
 
   const { data: rawTickets, error, count } = await query;
   const tickets = rawTickets ? hideDuplicateOpenTickets(rawTickets) : rawTickets;
@@ -131,7 +147,7 @@ export default async function Dashboard({
 
       <FilterBar
         categories={CATEGORIES}
-        current={{ status, category, q, phone }}
+        current={{ status, category, q, phone, from, to }}
         lockedCategory={userCategory}
       />
 
@@ -160,7 +176,7 @@ export default async function Dashboard({
       {totalPages > 1 && (
         <nav className="flex items-center justify-center gap-1.5 mt-6 text-sm flex-wrap">
           <Link
-            href={pageHref({ status, category, q, phone }, page - 1)}
+            href={pageHref({ status, category, q, phone, from, to }, page - 1)}
             aria-disabled={page <= 1}
             className={`px-3 py-1.5 rounded-lg border border-stone-300 ${
               page <= 1 ? "pointer-events-none opacity-40" : "hover:bg-stone-100"
@@ -177,7 +193,7 @@ export default async function Dashboard({
             ) : (
               <Link
                 key={p}
-                href={pageHref({ status, category, q, phone }, p)}
+                href={pageHref({ status, category, q, phone, from, to }, p)}
                 aria-current={p === page ? "page" : undefined}
                 className={`px-3 py-1.5 rounded-lg border ${
                   p === page
@@ -191,7 +207,7 @@ export default async function Dashboard({
           )}
 
           <Link
-            href={pageHref({ status, category, q, phone }, page + 1)}
+            href={pageHref({ status, category, q, phone, from, to }, page + 1)}
             aria-disabled={page >= totalPages}
             className={`px-3 py-1.5 rounded-lg border border-stone-300 ${
               page >= totalPages ? "pointer-events-none opacity-40" : "hover:bg-stone-100"
@@ -226,6 +242,8 @@ function pageHref(current: Search, page: number): string {
   if (current.category) params.set("category", current.category);
   if (current.q) params.set("q", current.q);
   if (current.phone) params.set("phone", current.phone);
+  if (current.from) params.set("from", current.from);
+  if (current.to) params.set("to", current.to);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
   return qs ? `/dashboard?${qs}` : "/dashboard";

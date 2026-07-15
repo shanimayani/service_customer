@@ -5,7 +5,7 @@ import { STATUSES, categoryColor, type Status } from "@/lib/constants";
 
 type Props = {
   categories: string[];
-  current: { status?: string; category?: string; q?: string; phone?: string };
+  current: { status?: string; category?: string; q?: string; phone?: string; from?: string; to?: string };
   /** אם קיים, המשתמש מוגבל לקטגוריה אחת — מציגים תג קבוע במקום בחירה */
   lockedCategory?: string;
 };
@@ -21,6 +21,8 @@ export default function FilterBar({ categories, current, lockedCategory }: Props
     if (next.category) params.set("category", next.category);
     if (next.q) params.set("q", next.q);
     if (next.phone) params.set("phone", next.phone);
+    if (next.from) params.set("from", next.from);
+    if (next.to) params.set("to", next.to);
     router.push(`${pathname}?${params.toString()}`);
   }
 
@@ -83,7 +85,24 @@ export default function FilterBar({ categories, current, lockedCategory }: Props
         className="w-40 rounded-lg border border-stone-300 px-3 py-1.5 text-sm"
       />
 
-      {(current.status || current.category || current.q || current.phone) && (
+      <div className="flex items-center gap-1.5 text-sm">
+        <label className="text-stone-500">מתאריך</label>
+        <input
+          type="date"
+          value={current.from ?? ""}
+          onChange={(e) => update({ from: e.target.value || undefined })}
+          className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
+        />
+        <label className="text-stone-500">עד</label>
+        <input
+          type="date"
+          value={current.to ?? ""}
+          onChange={(e) => update({ to: e.target.value || undefined })}
+          className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
+        />
+      </div>
+
+      {(current.status || current.category || current.q || current.phone || current.from || current.to) && (
         <button
           onClick={() => router.push(pathname)}
           className="text-sm text-stone-500 hover:text-stone-800 underline"
