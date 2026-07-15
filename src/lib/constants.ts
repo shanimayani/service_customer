@@ -10,7 +10,7 @@ export const STATUSES = {
 export type Status = keyof typeof STATUSES;
 
 // עדכני לקטגוריות של העסק שלך — מומלץ שיתאימו לקטגוריות שמוגדרות אצל Genie
-export const CATEGORIES = ["תמיכה", "חיוב", "אחריות", "הזמנות", "אבידות", "כללי", "מחלקת חשמל", "מחלקת ריהוט", "מחלקת אופטיקה"];
+export const CATEGORIES = ["תמיכה", "חיוב", "אחריות", "הזמנות", "אבידות", "כללי", "מחלקת חשמל", "מחלקת ריהוט", "מחלקת אופטיקה", "דירה ראשונה", "נציגים"];
 
 const CATEGORY_COLORS: Record<string, { badge: string; border: string }> = {
   "תמיכה": { badge: "bg-sky-100 text-sky-800 ring-sky-200", border: "border-sky-300" },
@@ -22,6 +22,8 @@ const CATEGORY_COLORS: Record<string, { badge: string; border: string }> = {
   "מחלקת חשמל": { badge: "bg-indigo-100 text-indigo-800 ring-indigo-200", border: "border-indigo-300" },
   "מחלקת ריהוט": { badge: "bg-teal-100 text-teal-800 ring-teal-200", border: "border-teal-300" },
   "מחלקת אופטיקה": { badge: "bg-pink-100 text-pink-800 ring-pink-200", border: "border-pink-300" },
+  "דירה ראשונה": { badge: "bg-orange-100 text-orange-800 ring-orange-200", border: "border-orange-300" },
+  "נציגים": { badge: "bg-cyan-100 text-cyan-800 ring-cyan-200", border: "border-cyan-300" },
 };
 
 const DEFAULT_CATEGORY_COLOR = { badge: "bg-stone-100 text-stone-600 ring-stone-200", border: "border-stone-300" };
