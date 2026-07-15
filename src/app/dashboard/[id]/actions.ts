@@ -29,7 +29,7 @@ export async function updateStatus(ticketId: string, status: string) {
 
   // סגירת פנייה סוגרת גם פניות פתוחות אחרות של אותו לקוח (למשל שיחות
   // חוזרות שכבר הוסתרו מהדשבורד תחת הפנייה הזו) — כדי שלא יישארו תקועות.
-  if (updated && (status === "closed" || status === "auto_closed")) {
+  if (updated && (status === "closed" || status === "auto_closed" || status === "dismissed")) {
     await db
       .from("tickets")
       .update({ status })

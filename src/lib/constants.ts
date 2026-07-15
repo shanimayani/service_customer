@@ -4,6 +4,7 @@ export const STATUSES = {
   waiting: { label: "ממתינה ללקוח", classes: "bg-violet-100 text-violet-800 ring-violet-200" },
   closed: { label: "טופל", classes: "bg-stone-200 text-stone-600 ring-stone-300" },
   auto_closed: { label: "טופל אוטומטית", classes: "bg-emerald-100 text-emerald-800 ring-emerald-200" },
+  dismissed: { label: "נסגר", classes: "bg-slate-200 text-slate-700 ring-slate-300" },
 } as const;
 
 export type Status = keyof typeof STATUSES;
