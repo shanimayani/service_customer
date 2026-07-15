@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { STATUSES, categoryColor, type Status } from "@/lib/constants";
 
@@ -13,6 +14,13 @@ type Props = {
 export default function FilterBar({ categories, current, lockedCategory }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const [fromValue, setFromValue] = useState(current.from ?? "");
+  const [toValue, setToValue] = useState(current.to ?? "");
+
+  useEffect(() => {
+    setFromValue(current.from ?? "");
+    setToValue(current.to ?? "");
+  }, [current.from, current.to]);
 
   function update(patch: Partial<Props["current"]>) {
     const next = { ...current, ...patch };
@@ -89,15 +97,17 @@ export default function FilterBar({ categories, current, lockedCategory }: Props
         <label className="text-stone-500">מתאריך</label>
         <input
           type="date"
-          value={current.from ?? ""}
-          onChange={(e) => update({ from: e.target.value || undefined })}
+          value={fromValue}
+          onChange={(e) => setFromValue(e.target.value)}
+          onBlur={() => update({ from: fromValue || undefined, to: toValue || undefined })}
           className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
         />
         <label className="text-stone-500">עד</label>
         <input
           type="date"
-          value={current.to ?? ""}
-          onChange={(e) => update({ to: e.target.value || undefined })}
+          value={toValue}
+          onChange={(e) => setToValue(e.target.value)}
+          onBlur={() => update({ from: fromValue || undefined, to: toValue || undefined })}
           className="rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
         />
       </div>
