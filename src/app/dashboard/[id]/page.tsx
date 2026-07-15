@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
@@ -9,6 +8,7 @@ import AttachmentLink from "@/components/AttachmentLink";
 import EditableSubject from "@/components/EditableSubject";
 import PreviousTicketRow from "@/components/PreviousTicketRow";
 import CategoryButtons from "@/components/CategoryButtons";
+import BackToListLink from "@/components/BackToListLink";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +60,7 @@ export default async function TicketPage({
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-8">
-      <Link href="/dashboard" className="text-sm text-stone-500 hover:underline">
-        → חזרה לכל הפניות
-      </Link>
+      <BackToListLink />
 
       <div className={`bg-white rounded-2xl border-2 ${categoryColor(ticket.category).border} p-6 mt-3`}>
         <div className="flex flex-wrap items-center gap-3">
