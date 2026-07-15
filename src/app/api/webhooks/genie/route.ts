@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
 import { classifyCall } from "@/lib/classifyCall";
+import { CATEGORIES } from "@/lib/constants";
 
 /**
  * POST /api/webhooks/genie
@@ -42,6 +43,15 @@ export async function POST(req: NextRequest) {
     req.headers.get("x-webhook-secret");
   if (!secret || provided !== secret) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // --- קטגוריה קבועה לקו ייעודי (למשל מזכירה וירטואלית נפרדת למחלקה) ---
+  // מוגדר בכתובת ה-webhook עצמה, לא בגוף הבקשה, כדי שלא יהיה תלוי במה ש-Genie שולחת.
+  const forceCategoryParam = req.nextUrl.searchParams.get("forceCategory");
+  const forceCategory =
+    forceCategoryParam && CATEGORIES.includes(forceCategoryParam) ? forceCategoryParam : null;
+  if (forceCategoryParam && !forceCategory) {
+    console.warn("unknown forceCategory param, ignoring:", forceCategoryParam);
   }
 
   let body: GeniePayload;
@@ -87,6 +97,7 @@ export async function POST(req: NextRequest) {
 
   // --- סיווג AI: כותרת, קטגוריה, והאם נדרש טיפול אנושי ---
   const classification = await classifyCall(body.summary, body.transcript);
+  if (forceCategory) classification.category = forceCategory;
 
   // --- יצירת פנייה, idempotent לפי callId ---
   const { data: ticket, error: tickErr } = await db
