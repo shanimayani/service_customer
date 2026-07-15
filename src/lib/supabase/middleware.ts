@@ -24,7 +24,12 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const { data, error } = await supabase.auth.getClaims();
+  // getUser() (לא getClaims()) — מבצע קריאת רשת אמיתית לשרת ה-Auth, שמבטיחה
+  // רענון אמין של הסשן כשה-access token פג. getClaims() תלוי בקונפיגורציית
+  // מפתחות JWT א-סימטריים בפרויקט Supabase, ולא ריענן סשנים בפועל.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return { supabaseResponse, user: error ? null : data?.claims ?? null };
+  return { supabaseResponse, user };
 }

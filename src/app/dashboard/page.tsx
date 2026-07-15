@@ -51,10 +51,11 @@ export default async function Dashboard({
   const db = supabaseAdmin();
 
   const supabaseAuth = await createClient();
-  const { data: claimsData } = await supabaseAuth.auth.getClaims();
-  const userEmail = claimsData?.claims?.email as string | undefined;
-  const userCategory = (claimsData?.claims?.app_metadata as { category?: string } | undefined)
-    ?.category;
+  const {
+    data: { user: authUser },
+  } = await supabaseAuth.auth.getUser();
+  const userEmail = authUser?.email;
+  const userCategory = (authUser?.app_metadata as { category?: string } | undefined)?.category;
 
   const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
 
