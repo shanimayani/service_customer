@@ -20,35 +20,6 @@ type Search = {
   page?: string;
 };
 
-/**
- * כשללקוח יש כמה פניות פתוחות (חדשה/בטיפול) בו-זמנית — למשל כמה שיחות
- * מאותו מספר טלפון על אותו נושא שעדיין לא טופל — מציגים בדשבורד רק את
- * הפנייה הפתוחה הראשונה שלו; השאר נגישות דרך "פניות קודמות" בתוך הפנייה עצמה.
- */
-function hideDuplicateOpenTickets<
-  T extends { id: string; customer_id: string; status: string; created_at: string }
->(rows: T[]): T[] {
-  const openByCustomer = new Map<string, T[]>();
-  for (const t of rows) {
-    if (t.status === "new" || t.status === "in_progress") {
-      const arr = openByCustomer.get(t.customer_id) ?? [];
-      arr.push(t);
-      openByCustomer.set(t.customer_id, arr);
-    }
-  }
-
-  const hiddenIds = new Set<string>();
-  for (const arr of openByCustomer.values()) {
-    if (arr.length < 2) continue;
-    const sorted = [...arr].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-    for (const extra of sorted.slice(1)) hiddenIds.add(extra.id);
-  }
-
-  return rows.filter((t) => !hiddenIds.has(t.id));
-}
-
 export default async function Dashboard({
   searchParams,
 }: {
@@ -96,8 +67,7 @@ export default async function Dashboard({
   const rangeTo = rangeFrom + PAGE_SIZE - 1;
   query = query.range(rangeFrom, rangeTo);
 
-  const { data: rawTickets, error, count } = await query;
-  const tickets = rawTickets ? hideDuplicateOpenTickets(rawTickets) : rawTickets;
+  const { data: tickets, error, count } = await query;
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
 
   // ספירות לפי סטטוס לכותרת (מוגבל לקטגוריה של המשתמש, אם יש)
@@ -106,6 +76,13 @@ export default async function Dashboard({
   const { data: allStatuses } = await statusCountsQuery;
   const counts: Record<string, number> = {};
   for (const t of allStatuses ?? []) counts[t.status] = (counts[t.status] ?? 0) + 1;
+
+  // נפח שיחות נוספות שמוזגו לפניות פתוחות (לא נספרות כ"פניות" בפני עצמן)
+  let callsCountQuery = db
+    .from("ticket_calls")
+    .select("id, tickets!inner(category)", { count: "exact", head: true });
+  if (userCategory) callsCountQuery = callsCountQuery.eq("tickets.category", userCategory);
+  const { count: totalCalls } = await callsCountQuery;
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
@@ -128,6 +105,7 @@ export default async function Dashboard({
           <p className="text-stone-500 text-sm mt-1">
             {allStatuses?.length ?? 0} פניות במערכת
             {counts.new ? ` · ${counts.new} חדשות ממתינות` : ""}
+            {totalCalls ? ` · ${totalCalls} שיחות נוספות מוזגו לפניות פתוחות` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm">

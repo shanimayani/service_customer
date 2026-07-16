@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
 import { classifyCall } from "@/lib/classifyCall";
 import { CATEGORIES } from "@/lib/constants";
+import { findLinkTarget } from "@/lib/ticketLinking";
 
 /**
  * POST /api/webhooks/genie
@@ -93,6 +94,35 @@ export async function POST(req: NextRequest) {
   if (custErr || !customer) {
     console.error("customer upsert failed", custErr);
     return NextResponse.json({ error: "db error" }, { status: 500 });
+  }
+
+  // --- שיחה חוזרת מלקוח עם פנייה פתוחה: מתקשרת לפנייה הקיימת במקום ליצור חדשה ---
+  const linkTarget = await findLinkTarget(db, customer.id);
+
+  if (linkTarget) {
+    const { error: callErr } = await db.from("ticket_calls").upsert(
+      {
+        ticket_id: linkTarget.id,
+        call_summary: body.summary,
+        call_transcript: body.transcript,
+        call_duration_seconds: body.durationSeconds,
+        genie_call_id: body.callId,
+        source: "genie",
+        created_at: body.startedAt,
+      },
+      { onConflict: "genie_call_id", ignoreDuplicates: true }
+    );
+
+    if (callErr) {
+      console.error("ticket_calls insert failed", callErr);
+      return NextResponse.json({ error: "db error" }, { status: 500 });
+    }
+
+    if (linkTarget.status === "waiting") {
+      await db.from("tickets").update({ status: "in_progress" }).eq("id", linkTarget.id);
+    }
+
+    return NextResponse.json({ ok: true, ticketId: linkTarget.id, linked: true });
   }
 
   // --- סיווג AI: כותרת, קטגוריה, והאם נדרש טיפול אנושי ---

@@ -7,6 +7,7 @@ import AttachmentLink from "@/components/AttachmentLink";
 import EditableSubject from "@/components/EditableSubject";
 import EditableCustomerInfo from "@/components/EditableCustomerInfo";
 import PreviousTicketRow from "@/components/PreviousTicketRow";
+import AdditionalCallRow from "@/components/AdditionalCallRow";
 import CategoryButtons from "@/components/CategoryButtons";
 import BackToListLink from "@/components/BackToListLink";
 
@@ -48,12 +49,18 @@ export default async function TicketPage({
     .limit(10);
   if (userCategory) previousQuery = previousQuery.eq("category", userCategory);
 
-  const [{ data: notes }, { data: attachments }, { data: previous }] =
+  const [{ data: notes }, { data: attachments }, { data: previous }, { data: additionalCalls }] =
     await Promise.all([
       db.from("notes").select("*").eq("ticket_id", id).order("created_at"),
       db.from("attachments").select("*").eq("ticket_id", id).order("created_at"),
       // קישור פניות קודמות: כל הפניות של אותו לקוח (מוגבל לקטגוריה של המשתמש, אם יש)
       previousQuery,
+      // שיחות נוספות שהתקבלו בזמן שהפנייה הזו הייתה פתוחה
+      db
+        .from("ticket_calls")
+        .select("*")
+        .eq("ticket_id", id)
+        .order("created_at"),
     ]);
 
   const st = STATUSES[ticket.status as Status];
@@ -157,6 +164,29 @@ export default async function TicketPage({
             </p>
           )}
         </section>
+
+        {/* שיחות נוספות שהתקבלו בזמן שהפנייה הזו הייתה פתוחה */}
+        {additionalCalls?.length ? (
+          <section className="mt-6">
+            <h2 className="text-sm font-semibold text-stone-500 mb-2">
+              פניות נוספות בפנייה זו ({additionalCalls.length})
+            </h2>
+            <ul className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
+              {additionalCalls.map((c) => (
+                <li key={c.id}>
+                  <AdditionalCallRow
+                    callSummary={c.call_summary}
+                    callTranscript={c.call_transcript}
+                    callRecordingUrl={c.call_recording_url}
+                    callDurationSeconds={c.call_duration_seconds}
+                    source={c.source}
+                    createdAt={c.created_at}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {/* פניות קודמות של הלקוח */}
         <section className="mt-6">

@@ -20,23 +20,7 @@ export async function updateStatus(ticketId: string, status: string) {
   const db = supabaseAdmin();
   await assertTicketAccess(db, ticketId);
 
-  const { data: updated } = await db
-    .from("tickets")
-    .update({ status })
-    .eq("id", ticketId)
-    .select("customer_id")
-    .single();
-
-  // סגירת פנייה סוגרת גם פניות פתוחות אחרות של אותו לקוח (למשל שיחות
-  // חוזרות שכבר הוסתרו מהדשבורד תחת הפנייה הזו) — כדי שלא יישארו תקועות.
-  if (updated && (status === "closed" || status === "auto_closed" || status === "dismissed")) {
-    await db
-      .from("tickets")
-      .update({ status })
-      .eq("customer_id", updated.customer_id)
-      .neq("id", ticketId)
-      .in("status", ["new", "in_progress"]);
-  }
+  await db.from("tickets").update({ status }).eq("id", ticketId);
 
   revalidatePath(`/dashboard/${ticketId}`);
   revalidatePath("/dashboard");

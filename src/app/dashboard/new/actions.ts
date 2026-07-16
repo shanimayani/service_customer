@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
 import { CATEGORIES } from "@/lib/constants";
+import { findLinkTarget } from "@/lib/ticketLinking";
 
 export async function createTicket(formData: FormData) {
   const phoneRaw = String(formData.get("phone") ?? "");
@@ -36,6 +37,24 @@ export async function createTicket(formData: FormData) {
 
   if (custErr || !customer) {
     redirect("/dashboard/new?error=" + encodeURIComponent("שגיאה ביצירת הלקוח"));
+  }
+
+  // אם ללקוח כבר יש פנייה פתוחה — מתייחסים לזה כשיחה נוספת בתוך הפנייה
+  // הקיימת, במקום ליצור פנייה נפרדת (אותו היגיון כמו שיחות מ-Genie).
+  const linkTarget = await findLinkTarget(db, customer.id);
+  if (linkTarget) {
+    const callSummary = note ? `${subject}\n${note}` : subject;
+    await db.from("ticket_calls").insert({
+      ticket_id: linkTarget.id,
+      call_summary: callSummary,
+      source: "manual",
+    });
+
+    if (linkTarget.status === "waiting") {
+      await db.from("tickets").update({ status: "in_progress" }).eq("id", linkTarget.id);
+    }
+
+    redirect(`/dashboard/${linkTarget.id}`);
   }
 
   const { data: ticket, error: tickErr } = await db
