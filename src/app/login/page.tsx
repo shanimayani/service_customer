@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { login } from "./actions";
 
 export default async function LoginPage({
@@ -10,8 +11,10 @@ export default async function LoginPage({
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-xl border border-stone-300 p-6">
-        <h1 className="text-xl font-bold mb-1">התחברות</h1>
-        <p className="text-stone-500 text-sm mb-6">מוקד פניות · פרקטי</p>
+        <div className="flex flex-col items-center mb-6">
+          <Image src="/logo-mark.png" alt="פרקטי" width={48} height={48} className="h-12 w-auto" priority />
+          <h1 className="text-lg font-bold mt-2">שרות לקוחות - פרקטי</h1>
+        </div>
 
         {error && (
           <p className="text-red-600 bg-red-50 rounded-lg p-3 mb-4 text-sm">
