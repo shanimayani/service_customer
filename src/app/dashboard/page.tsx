@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
@@ -100,13 +101,16 @@ export default async function Dashboard({
         </form>
       </div>
       <header className="flex flex-wrap items-end justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">מוקד פניות</h1>
-          <p className="text-stone-500 text-sm mt-1">
-            {allStatuses?.length ?? 0} פניות במערכת
-            {counts.new ? ` · ${counts.new} חדשות ממתינות` : ""}
-            {totalCalls ? ` · ${totalCalls} שיחות נוספות מוזגו לפניות פתוחות` : ""}
-          </p>
+        <div className="flex items-center gap-3">
+          <Image src="/logo-mark.png" alt="פרקטי" width={48} height={48} className="h-12 w-auto" priority />
+          <div>
+            <h1 className="text-2xl font-bold">שרות לקוחות - פרקטי</h1>
+            <p className="text-stone-500 text-sm mt-1">
+              {allStatuses?.length ?? 0} פניות במערכת
+              {counts.new ? ` · ${counts.new} חדשות ממתינות` : ""}
+              {totalCalls ? ` · ${totalCalls} שיחות נוספות מוזגו לפניות פתוחות` : ""}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
           {(Object.keys(STATUSES) as Status[]).map((s) => (

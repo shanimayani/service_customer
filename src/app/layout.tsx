@@ -5,7 +5,7 @@ import "./globals.css";
 const heebo = Heebo({ subsets: ["hebrew", "latin"], weight: ["300", "400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "מוקד פניות",
+  title: "שרות לקוחות - פרקטי",
   description: "מערכת ניהול פניות שירות לקוחות",
 };
 
