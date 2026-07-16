@@ -12,6 +12,8 @@
     "@anthropic-ai/sdk": "^0.111.0",
     "@supabase/ssr": "^0.12.2",
     "@supabase/supabase-js": "^2.110.2",
+    "imapflow": "^1.4.7",
+    "mailparser": "^3.9.14",
     "next": "16.2.10",
     "nodemailer": "^9.0.3",
     "react": "19.2.4",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",

@@ -129,11 +129,22 @@ export async function sendTicketEmail(ticketId: string, formData: FormData) {
     );
   }
 
+  let messageId: string | undefined;
   try {
-    await sendEmail({ to, subject, text: body, attachments });
+    const result = await sendEmail({ to, subject, text: body, attachments });
+    messageId = result.messageId;
   } catch (err) {
     console.error("send email failed", err);
     redirect(`/dashboard/${ticketId}?error=` + encodeURIComponent("שליחת המייל נכשלה, נסי שוב"));
+  }
+
+  // שומרים את ה-Message-ID כדי שתגובה עתידית ללקוח תשויך אוטומטית לפנייה הזו
+  if (messageId) {
+    await db.from("ticket_emails").insert({
+      ticket_id: ticketId,
+      message_id: messageId,
+      direction: "outbound",
+    });
   }
 
   await db.from("notes").insert({

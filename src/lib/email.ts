@@ -27,11 +27,13 @@ export async function sendEmail({
     auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
   });
 
-  await transporter.sendMail({
+  const info = await transporter.sendMail({
     from: `"${SMTP_FROM_NAME ?? "פרקטי"}" <${SMTP_FROM_EMAIL}>`,
     to,
     subject,
     text,
     attachments,
   });
+
+  return { messageId: info.messageId };
 }
