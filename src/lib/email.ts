@@ -1,5 +1,18 @@
 import nodemailer from "nodemailer";
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** עוטפת את גוף המייל ב-HTML עם כיווניות מימין-לשמאל, כדי שהטקסט בעברית יוצג נכון */
+function toRtlHtml(text: string): string {
+  const withBreaks = escapeHtml(text).replace(/\n/g, "<br>");
+  return `<div dir="rtl" style="text-align: right; font-family: sans-serif; white-space: pre-wrap;">${withBreaks}</div>`;
+}
+
 /**
  * שולחת מייל דרך חשבון המייל העסקי (SMTP), מוגדר במשתני סביבה.
  * לא שירות מייל ייעודי — תיבת מייל רגילה (Gmail/Outlook) עם סיסמת אפליקציה.
@@ -32,6 +45,7 @@ export async function sendEmail({
     to,
     subject,
     text,
+    html: toRtlHtml(text),
     attachments,
   });
 
