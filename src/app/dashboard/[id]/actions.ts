@@ -149,7 +149,7 @@ export async function sendTicketEmail(ticketId: string, formData: FormData) {
 
   await db.from("notes").insert({
     ticket_id: ticketId,
-    content: `נשלח מייל ל-${to}: ${subject}`,
+    content: `✉️ נשלח מייל ל-${to}: ${subject}`,
   });
 
   revalidatePath(`/dashboard/${ticketId}`);

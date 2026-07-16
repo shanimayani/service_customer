@@ -100,7 +100,7 @@ export async function pollEmailReplies(): Promise<{ scanned: number; matched: nu
 
         await db.from("notes").insert({
           ticket_id: outbound.ticket_id,
-          content: `תגובה למייל מ-${from}: ${body}`,
+          content: `✉️ התקבלה תגובה במייל מ-${from}:\n${body}`,
         });
 
         await db.from("ticket_emails").insert({
