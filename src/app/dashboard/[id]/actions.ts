@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
+import { sendEmail } from "@/lib/email";
 
 type Db = ReturnType<typeof supabaseAdmin>;
 
@@ -91,6 +93,52 @@ export async function uploadAttachment(ticketId: string, formData: FormData) {
     file_name: file.name,
     mime_type: file.type,
     size_bytes: file.size,
+  });
+
+  revalidatePath(`/dashboard/${ticketId}`);
+}
+
+export async function sendTicketEmail(ticketId: string, formData: FormData) {
+  const to = String(formData.get("to") ?? "").trim();
+  const subject = String(formData.get("subject") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const attachmentIds = formData.getAll("attachmentIds").map(String);
+
+  if (!to || !subject) {
+    redirect(`/dashboard/${ticketId}?error=` + encodeURIComponent("יש למלא נמען ונושא למייל"));
+  }
+
+  const db = supabaseAdmin();
+  await assertTicketAccess(db, ticketId);
+
+  let attachments: { filename: string; content: Buffer }[] = [];
+  if (attachmentIds.length) {
+    // מוודאים שכל קובץ שנבחר שייך באמת לפנייה הזו, ולא סומכים על ה-id מהטופס
+    const { data: rows } = await db
+      .from("attachments")
+      .select("id, storage_path, file_name")
+      .eq("ticket_id", ticketId)
+      .in("id", attachmentIds);
+
+    attachments = await Promise.all(
+      (rows ?? []).map(async (a) => {
+        const { data: file } = await db.storage.from("attachments").download(a.storage_path);
+        const buffer = Buffer.from(await (file as Blob).arrayBuffer());
+        return { filename: a.file_name, content: buffer };
+      })
+    );
+  }
+
+  try {
+    await sendEmail({ to, subject, text: body, attachments });
+  } catch (err) {
+    console.error("send email failed", err);
+    redirect(`/dashboard/${ticketId}?error=` + encodeURIComponent("שליחת המייל נכשלה, נסי שוב"));
+  }
+
+  await db.from("notes").insert({
+    ticket_id: ticketId,
+    content: `נשלח מייל ל-${to}: ${subject}`,
   });
 
   revalidatePath(`/dashboard/${ticketId}`);

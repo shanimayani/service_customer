@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
-import { addNote, updateStatus, uploadAttachment } from "./actions";
+import { addNote, updateStatus, uploadAttachment, sendTicketEmail } from "./actions";
 import AttachmentLink from "@/components/AttachmentLink";
 import EditableSubject from "@/components/EditableSubject";
 import EditableCustomerInfo from "@/components/EditableCustomerInfo";
@@ -21,10 +21,13 @@ function formatDuration(seconds: number): string {
 
 export default async function TicketPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
+  const { error } = await searchParams;
   const db = supabaseAdmin();
   const userCategory = await getUserCategory();
 
@@ -68,6 +71,10 @@ export default async function TicketPage({
   return (
     <main className="max-w-4xl mx-auto px-4 py-8">
       <BackToListLink />
+
+      {error && (
+        <p className="text-red-600 bg-red-50 rounded-lg p-3 mt-3 text-sm">{error}</p>
+      )}
 
       <div className={`bg-white rounded-2xl border-2 ${categoryColor(ticket.category).border} p-6 mt-3`}>
         <div className="flex flex-wrap items-center gap-3">
@@ -269,6 +276,67 @@ export default async function TicketPage({
             />
             <button className="bg-stone-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-stone-700">
               העלאת קובץ
+            </button>
+          </form>
+        </section>
+
+        {/* שליחת מייל ללקוח */}
+        <section className="mt-6">
+          <h2 className="text-sm font-semibold text-stone-500 mb-2">שליחת מייל ללקוח</h2>
+          <form action={sendTicketEmail.bind(null, ticket.id)} className="space-y-3">
+            <div>
+              <label htmlFor="to" className="block text-xs text-stone-500 mb-1">
+                אל
+              </label>
+              <input
+                id="to"
+                name="to"
+                type="email"
+                dir="ltr"
+                required
+                defaultValue={customer?.email ?? ""}
+                className="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+              />
+            </div>
+            <div>
+              <label htmlFor="subject" className="block text-xs text-stone-500 mb-1">
+                נושא
+              </label>
+              <input
+                id="subject"
+                name="subject"
+                type="text"
+                required
+                defaultValue={ticket.subject}
+                className="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+              />
+            </div>
+            <div>
+              <label htmlFor="body" className="block text-xs text-stone-500 mb-1">
+                תוכן ההודעה
+              </label>
+              <textarea
+                id="body"
+                name="body"
+                rows={5}
+                className="w-full px-3 py-2 rounded-lg border border-stone-300 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+              />
+            </div>
+            {attachments?.length ? (
+              <div>
+                <span className="block text-xs text-stone-500 mb-1">קבצים לצירוף</span>
+                <div className="space-y-1">
+                  {attachments.map((a) => (
+                    <label key={a.id} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name="attachmentIds" value={a.id} className="accent-stone-800" />
+                      {a.file_name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <button className="bg-stone-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-stone-700">
+              שליחת מייל
             </button>
           </form>
         </section>
