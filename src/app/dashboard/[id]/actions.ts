@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
+import { addTicketAttachments } from "@/lib/attachments";
 
 type Db = ReturnType<typeof supabaseAdmin>;
 
@@ -71,29 +72,12 @@ export async function addNote(ticketId: string, formData: FormData) {
 }
 
 export async function uploadAttachment(ticketId: string, formData: FormData) {
-  const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return;
-  if (file.size > 20 * 1024 * 1024) return; // עד 20MB
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!files.length) return;
 
   const db = supabaseAdmin();
   await assertTicketAccess(db, ticketId);
-  const path = `${ticketId}/${Date.now()}-${file.name}`;
-
-  const { error: upErr } = await db.storage
-    .from("attachments")
-    .upload(path, file, { contentType: file.type });
-  if (upErr) {
-    console.error("upload failed", upErr);
-    return;
-  }
-
-  await db.from("attachments").insert({
-    ticket_id: ticketId,
-    storage_path: path,
-    file_name: file.name,
-    mime_type: file.type,
-    size_bytes: file.size,
-  });
+  await addTicketAttachments(db, ticketId, files);
 
   revalidatePath(`/dashboard/${ticketId}`);
 }

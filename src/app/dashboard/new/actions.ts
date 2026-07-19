@@ -6,6 +6,7 @@ import { getUserCategory } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
 import { CATEGORIES } from "@/lib/constants";
 import { findLinkTarget } from "@/lib/ticketLinking";
+import { addTicketAttachments } from "@/lib/attachments";
 
 export async function createTicket(formData: FormData) {
   const phoneRaw = String(formData.get("phone") ?? "");
@@ -14,6 +15,7 @@ export async function createTicket(formData: FormData) {
   const subject = String(formData.get("subject") ?? "").trim();
   const categoryInput = String(formData.get("category") ?? "");
   const note = String(formData.get("note") ?? "").trim();
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
 
   const phone = normalizePhone(phoneRaw);
   if (!phone || !subject) {
@@ -54,6 +56,8 @@ export async function createTicket(formData: FormData) {
       await db.from("tickets").update({ status: "in_progress" }).eq("id", linkTarget.id);
     }
 
+    if (files.length) await addTicketAttachments(db, linkTarget.id, files);
+
     redirect(`/dashboard/${linkTarget.id}`);
   }
 
@@ -76,6 +80,8 @@ export async function createTicket(formData: FormData) {
   if (note) {
     await db.from("notes").insert({ ticket_id: ticket.id, content: note });
   }
+
+  if (files.length) await addTicketAttachments(db, ticket.id, files);
 
   redirect(`/dashboard/${ticket.id}`);
 }

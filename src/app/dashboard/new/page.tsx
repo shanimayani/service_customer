@@ -1,6 +1,8 @@
 import { getUserCategory } from "@/lib/auth";
 import { CATEGORIES } from "@/lib/constants";
+import { MAX_ATTACHMENTS_PER_TICKET } from "@/lib/attachments";
 import BackToListLink from "@/components/BackToListLink";
+import MultiFileInput from "@/components/MultiFileInput";
 import { createTicket } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -110,6 +112,13 @@ export default async function NewTicketPage({
             rows={4}
             className="w-full px-3 py-2 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-stone-400"
           />
+        </div>
+
+        <div>
+          <label htmlFor="files" className="block text-sm text-stone-600 mb-1">
+            קבצים מצורפים (עד {MAX_ATTACHMENTS_PER_TICKET})
+          </label>
+          <MultiFileInput id="files" name="files" max={MAX_ATTACHMENTS_PER_TICKET} />
         </div>
 
         <button

@@ -3,7 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getUserCategory } from "@/lib/auth";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
 import { addNote, updateStatus, uploadAttachment, sendTicketEmail } from "./actions";
+import { MAX_ATTACHMENTS_PER_TICKET } from "@/lib/attachments";
 import AttachmentLink from "@/components/AttachmentLink";
+import MultiFileInput from "@/components/MultiFileInput";
 import EditableSubject from "@/components/EditableSubject";
 import EditableCustomerInfo from "@/components/EditableCustomerInfo";
 import PreviousTicketRow from "@/components/PreviousTicketRow";
@@ -264,20 +266,25 @@ export default async function TicketPage({
               <li className="text-sm text-stone-400">אין קבצים מצורפים.</li>
             )}
           </ul>
-          <form
-            action={uploadAttachment.bind(null, ticket.id)}
-            className="mt-3 flex items-center gap-2"
-          >
-            <input
-              type="file"
-              name="file"
-              required
-              className="text-sm file:me-3 file:rounded-lg file:border-0 file:bg-stone-200 file:px-3 file:py-1.5 file:text-sm hover:file:bg-stone-300"
-            />
-            <button className="bg-stone-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-stone-700">
-              העלאת קובץ
-            </button>
-          </form>
+          {(attachments?.length ?? 0) < MAX_ATTACHMENTS_PER_TICKET ? (
+            <form
+              action={uploadAttachment.bind(null, ticket.id)}
+              className="mt-3 flex items-center gap-2"
+            >
+              <MultiFileInput
+                id="files"
+                name="files"
+                max={MAX_ATTACHMENTS_PER_TICKET - (attachments?.length ?? 0)}
+              />
+              <button className="bg-stone-800 text-white rounded-lg px-4 py-2 text-sm hover:bg-stone-700 whitespace-nowrap">
+                העלאת קבצים
+              </button>
+            </form>
+          ) : (
+            <p className="text-xs text-stone-400 mt-3">
+              הגעת למכסה של {MAX_ATTACHMENTS_PER_TICKET} קבצים מצורפים לפנייה.
+            </p>
+          )}
         </section>
 
         {/* שליחת מייל ללקוח */}
