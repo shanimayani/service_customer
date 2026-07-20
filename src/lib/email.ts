@@ -1,5 +1,13 @@
 import nodemailer from "nodemailer";
 
+/** נרמול כתובת מייל: trim + lowercase, כדי שהתאמות/כתיבה לטבלת customers יהיו עקביות */
+export function normalizeEmail(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim().toLowerCase();
+  if (!trimmed) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+  return trimmed;
+}
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
