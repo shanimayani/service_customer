@@ -52,8 +52,13 @@ export default async function Dashboard({
     .order("created_at", { ascending: false });
 
   if (status && status in STATUSES) query = query.eq("status", status);
-  if (userCategories) query = query.in("category", userCategories);
-  else if (category) query = query.in("category", category.split(","));
+  if (userCategories) {
+    // מסננות רק בתוך הקטגוריות שהמשתמש מוגבל אליהן, גם אם ביקשו קטגוריה אחרת ב-URL
+    const requested = category ? category.split(",").filter((c) => userCategories.includes(c)) : [];
+    query = query.in("category", requested.length ? requested : userCategories);
+  } else if (category) {
+    query = query.in("category", category.split(","));
+  }
   if (q) query = query.or(`subject.ilike.%${q}%,call_summary.ilike.%${q}%`);
   if (phoneDigits) query = query.ilike("customers.phone", `%${phoneDigits}%`);
 

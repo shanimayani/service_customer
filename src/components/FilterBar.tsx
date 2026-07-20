@@ -23,6 +23,8 @@ export default function FilterBar({ categories, current, lockedCategories }: Pro
     setToValue(current.to ?? "");
   }, [current.from, current.to]);
 
+  const selectedCategories = current.category ? current.category.split(",") : [];
+
   function update(patch: Partial<Props["current"]>) {
     const next = { ...current, ...patch };
     const params = new URLSearchParams();
@@ -52,16 +54,37 @@ export default function FilterBar({ categories, current, lockedCategories }: Pro
 
       {lockedCategories && lockedCategories.length ? (
         <div className="flex flex-wrap gap-1.5">
-          {lockedCategories.map((c) => (
-            <span key={c} className={`text-sm px-3 py-1.5 rounded-lg ring-1 ${categoryColor(c).badge}`}>
-              {c}
-            </span>
-          ))}
+          {lockedCategories.map((c) => {
+            const active = selectedCategories.length === 0 || selectedCategories.includes(c);
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  let next: string[];
+                  if (selectedCategories.length === 0) {
+                    // כלום לא מסונן כרגע (מוצגות כל הקטגוריות) — לחיצה מצמצמת לקטגוריה הזו בלבד
+                    next = [c];
+                  } else if (selectedCategories.includes(c)) {
+                    next = selectedCategories.filter((s) => s !== c);
+                  } else {
+                    next = [...selectedCategories, c];
+                  }
+                  update({ category: next.length ? next.join(",") : undefined });
+                }}
+                className={`text-sm px-3 py-1.5 rounded-lg ring-1 transition-colors ${
+                  active ? categoryColor(c).badge : "bg-white ring-stone-200 text-stone-400 hover:ring-stone-400"
+                }`}
+              >
+                {c}
+              </button>
+            );
+          })}
         </div>
       ) : (
         <CategoryMultiSelect
           categories={categories}
-          selected={current.category ? current.category.split(",") : []}
+          selected={selectedCategories}
           onChange={(selected) => update({ category: selected.length ? selected.join(",") : undefined })}
         />
       )}
