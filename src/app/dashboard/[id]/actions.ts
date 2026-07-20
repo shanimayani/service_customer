@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getUserCategory } from "@/lib/auth";
+import { getUserCategories } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { addTicketAttachments } from "@/lib/attachments";
 
@@ -11,10 +11,10 @@ type Db = ReturnType<typeof supabaseAdmin>;
 
 /** זורק אם המשתמש מוגבל לקטגוריה אחרת מזו של הפנייה. משתמש ללא הגבלה עובר תמיד. */
 async function assertTicketAccess(db: Db, ticketId: string) {
-  const userCategory = await getUserCategory();
-  if (!userCategory) return;
+  const userCategories = await getUserCategories();
+  if (!userCategories) return;
   const { data } = await db.from("tickets").select("category").eq("id", ticketId).maybeSingle();
-  if (data?.category !== userCategory) {
+  if (!data || !userCategories.includes(data.category)) {
     throw new Error("אין הרשאה לפנייה זו");
   }
 }
@@ -148,8 +148,8 @@ export async function getTicketPreview(ticketId: string) {
     .eq("id", ticketId)
     .maybeSingle();
 
-  const userCategory = await getUserCategory();
-  if (userCategory && data?.category !== userCategory) return null;
+  const userCategories = await getUserCategories();
+  if (userCategories && (!data?.category || !userCategories.includes(data.category))) return null;
 
   return data;
 }

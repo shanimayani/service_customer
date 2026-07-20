@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getUserCategory } from "@/lib/auth";
-import { CATEGORIES, categoryColor } from "@/lib/constants";
+import { getUserCategories, categoriesFromAppMetadata } from "@/lib/auth";
+import { CATEGORIES } from "@/lib/constants";
 import { createStaffAccount } from "./actions";
+import CategoriesFormField from "@/components/CategoriesFormField";
+import EditStaffCategories from "@/components/EditStaffCategories";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +14,8 @@ export default async function StaffPage({
 }: {
   searchParams: Promise<{ error?: string; success?: string }>;
 }) {
-  const userCategory = await getUserCategory();
-  if (userCategory) notFound();
+  const userCategories = await getUserCategories();
+  if (userCategories) notFound();
 
   const { error, success } = await searchParams;
 
@@ -43,19 +45,11 @@ export default async function StaffPage({
         <h2 className="text-sm font-semibold text-stone-500 mb-3">משתמשים קיימים</h2>
         <ul className="divide-y divide-stone-100">
           {users.map((u) => {
-            const cat = (u.app_metadata as { category?: string } | undefined)?.category;
+            const cats = categoriesFromAppMetadata(u.app_metadata) ?? [];
             return (
               <li key={u.id} className="py-2 flex items-center justify-between gap-3">
                 <span className="text-sm">{u.email}</span>
-                {cat ? (
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full ring-1 ${categoryColor(cat).badge}`}>
-                    {cat}
-                  </span>
-                ) : (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full ring-1 bg-stone-100 text-stone-600 ring-stone-200">
-                    גישה מלאה
-                  </span>
-                )}
+                <EditStaffCategories userId={u.id} categories={cats} />
               </li>
             );
           })}
@@ -91,22 +85,8 @@ export default async function StaffPage({
             />
           </div>
           <div>
-            <label htmlFor="category" className="block text-sm text-stone-600 mb-1">
-              הרשאת גישה
-            </label>
-            <select
-              id="category"
-              name="category"
-              defaultValue=""
-              className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-stone-400"
-            >
-              <option value="">ללא הגבלה (גישה מלאה)</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <span className="block text-sm text-stone-600 mb-1">הרשאת גישה</span>
+            <CategoriesFormField name="categories" categories={CATEGORIES} />
           </div>
           <button
             type="submit"

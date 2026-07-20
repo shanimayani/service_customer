@@ -7,10 +7,12 @@ export default function CategoryMultiSelect({
   categories,
   selected,
   onChange,
+  emptyLabel = "כל הנושאים",
 }: {
   categories: string[];
   selected: string[];
   onChange: (selected: string[]) => void;
+  emptyLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ export default function CategoryMultiSelect({
 
   const label =
     selected.length === 0
-      ? "כל הנושאים"
+      ? emptyLabel
       : selected.length === 1
       ? selected[0]
       : `${selected.length} נושאים נבחרו`;

@@ -1,4 +1,4 @@
-import { getUserCategory } from "@/lib/auth";
+import { getUserCategories } from "@/lib/auth";
 import { CATEGORIES } from "@/lib/constants";
 import { MAX_ATTACHMENTS_PER_TICKET } from "@/lib/attachments";
 import BackToListLink from "@/components/BackToListLink";
@@ -13,7 +13,7 @@ export default async function NewTicketPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
-  const userCategory = await getUserCategory();
+  const userCategories = await getUserCategories();
 
   return (
     <main className="max-w-xl mx-auto px-4 py-8">
@@ -75,11 +75,11 @@ export default async function NewTicketPage({
           />
         </div>
 
-        {userCategory ? (
+        {userCategories && userCategories.length === 1 ? (
           <div>
             <span className="block text-sm text-stone-600 mb-1">קטגוריה</span>
             <span className="text-sm px-3 py-1.5 rounded-lg ring-1 bg-stone-100 text-stone-600 ring-stone-200">
-              {userCategory}
+              {userCategories[0]}
             </span>
           </div>
         ) : (
@@ -90,10 +90,10 @@ export default async function NewTicketPage({
             <select
               id="category"
               name="category"
-              defaultValue="כללי"
+              defaultValue={userCategories ? userCategories[0] : "כללי"}
               className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-stone-400"
             >
-              {CATEGORIES.map((c) => (
+              {(userCategories ?? CATEGORIES).map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

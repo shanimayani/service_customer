@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getUserCategory } from "@/lib/auth";
+import { getUserCategories } from "@/lib/auth";
 import { STATUSES, CATEGORIES, categoryColor, type Status } from "@/lib/constants";
 import { addNote, updateStatus, uploadAttachment, sendTicketEmail } from "./actions";
 import { MAX_ATTACHMENTS_PER_TICKET } from "@/lib/attachments";
@@ -31,7 +31,7 @@ export default async function TicketPage({
   const { id } = await params;
   const { error } = await searchParams;
   const db = supabaseAdmin();
-  const userCategory = await getUserCategory();
+  const userCategories = await getUserCategories();
 
   const { data: ticket } = await db
     .from("tickets")
@@ -40,7 +40,7 @@ export default async function TicketPage({
     .maybeSingle();
 
   if (!ticket) notFound();
-  if (userCategory && ticket.category !== userCategory) notFound();
+  if (userCategories && !userCategories.includes(ticket.category)) notFound();
   const customer = Array.isArray(ticket.customers)
     ? ticket.customers[0]
     : ticket.customers;
@@ -52,7 +52,7 @@ export default async function TicketPage({
     .neq("id", id)
     .order("created_at", { ascending: false })
     .limit(10);
-  if (userCategory) previousQuery = previousQuery.eq("category", userCategory);
+  if (userCategories) previousQuery = previousQuery.in("category", userCategories);
 
   const [{ data: notes }, { data: attachments }, { data: previous }, { data: additionalCalls }] =
     await Promise.all([

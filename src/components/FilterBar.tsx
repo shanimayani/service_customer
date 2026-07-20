@@ -8,11 +8,11 @@ import CategoryMultiSelect from "@/components/CategoryMultiSelect";
 type Props = {
   categories: string[];
   current: { status?: string; category?: string; q?: string; phone?: string; from?: string; to?: string };
-  /** אם קיים, המשתמש מוגבל לקטגוריה אחת — מציגים תג קבוע במקום בחירה */
-  lockedCategory?: string;
+  /** אם קיים, המשתמש מוגבל לקטגוריות האלה — מציגים תגים קבועים במקום בחירה */
+  lockedCategories?: string[];
 };
 
-export default function FilterBar({ categories, current, lockedCategory }: Props) {
+export default function FilterBar({ categories, current, lockedCategories }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [fromValue, setFromValue] = useState(current.from ?? "");
@@ -50,12 +50,14 @@ export default function FilterBar({ categories, current, lockedCategory }: Props
         ))}
       </select>
 
-      {lockedCategory ? (
-        <span
-          className={`text-sm px-3 py-1.5 rounded-lg ring-1 ${categoryColor(lockedCategory).badge}`}
-        >
-          {lockedCategory}
-        </span>
+      {lockedCategories && lockedCategories.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {lockedCategories.map((c) => (
+            <span key={c} className={`text-sm px-3 py-1.5 rounded-lg ring-1 ${categoryColor(c).badge}`}>
+              {c}
+            </span>
+          ))}
+        </div>
       ) : (
         <CategoryMultiSelect
           categories={categories}

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getUserCategory } from "@/lib/auth";
+import { getUserCategories } from "@/lib/auth";
 import { normalizePhone } from "@/lib/phone";
 import { CATEGORIES } from "@/lib/constants";
 import { findLinkTarget } from "@/lib/ticketLinking";
@@ -22,8 +22,14 @@ export async function createTicket(formData: FormData) {
     redirect("/dashboard/new?error=" + encodeURIComponent("יש למלא טלפון תקין ונושא לפנייה"));
   }
 
-  const userCategory = await getUserCategory();
-  const category = userCategory ?? (CATEGORIES.includes(categoryInput) ? categoryInput : "כללי");
+  const userCategories = await getUserCategories();
+  const category = userCategories
+    ? userCategories.includes(categoryInput)
+      ? categoryInput
+      : userCategories[0]
+    : CATEGORIES.includes(categoryInput)
+    ? categoryInput
+    : "כללי";
 
   const db = supabaseAdmin();
 

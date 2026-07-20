@@ -3,6 +3,7 @@ import Image from "next/image";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
+import { categoriesFromAppMetadata } from "@/lib/auth";
 import { STATUSES, CATEGORIES, type Status } from "@/lib/constants";
 import FilterBar from "@/components/FilterBar";
 import TicketRow from "@/components/TicketRow";
@@ -35,7 +36,7 @@ export default async function Dashboard({
     data: { user: authUser },
   } = await supabaseAuth.auth.getUser();
   const userEmail = authUser?.email;
-  const userCategory = (authUser?.app_metadata as { category?: string } | undefined)?.category;
+  const userCategories = categoriesFromAppMetadata(authUser?.app_metadata);
 
   let phoneDigits = phone ? phone.replace(/\D/g, "") : "";
   // מספרים בישראל נשמרים בפורמט 972... בלי ה-0 המוביל, אז מסירים אותו גם
@@ -51,7 +52,7 @@ export default async function Dashboard({
     .order("created_at", { ascending: false });
 
   if (status && status in STATUSES) query = query.eq("status", status);
-  if (userCategory) query = query.eq("category", userCategory);
+  if (userCategories) query = query.in("category", userCategories);
   else if (category) query = query.in("category", category.split(","));
   if (q) query = query.or(`subject.ilike.%${q}%,call_summary.ilike.%${q}%`);
   if (phoneDigits) query = query.ilike("customers.phone", `%${phoneDigits}%`);
@@ -73,7 +74,7 @@ export default async function Dashboard({
 
   // ספירות לפי סטטוס לכותרת (מוגבל לקטגוריה של המשתמש, אם יש)
   let statusCountsQuery = db.from("tickets").select("status");
-  if (userCategory) statusCountsQuery = statusCountsQuery.eq("category", userCategory);
+  if (userCategories) statusCountsQuery = statusCountsQuery.in("category", userCategories);
   const { data: allStatuses } = await statusCountsQuery;
   const counts: Record<string, number> = {};
   for (const t of allStatuses ?? []) counts[t.status] = (counts[t.status] ?? 0) + 1;
@@ -82,13 +83,13 @@ export default async function Dashboard({
   let callsCountQuery = db
     .from("ticket_calls")
     .select("id, tickets!inner(category)", { count: "exact", head: true });
-  if (userCategory) callsCountQuery = callsCountQuery.eq("tickets.category", userCategory);
+  if (userCategories) callsCountQuery = callsCountQuery.in("tickets.category", userCategories);
   const { count: totalCalls } = await callsCountQuery;
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex justify-end items-center gap-3 mb-2">
-        {!userCategory && (
+        {!userCategories && (
           <Link href="/dashboard/staff" className="text-sm text-stone-500 hover:text-stone-800 underline">
             ניהול צוות
           </Link>
@@ -133,7 +134,7 @@ export default async function Dashboard({
       <FilterBar
         categories={CATEGORIES}
         current={{ status, category, q, phone, from, to }}
-        lockedCategory={userCategory}
+        lockedCategories={userCategories ?? undefined}
       />
 
       {error && (
