@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
+import { sanitizePolicyHtml } from "@/lib/sanitizeHtml";
 import PolicyEditor from "@/components/PolicyEditor";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function PolicyPage() {
       </Link>
       <h1 className="text-2xl font-bold mt-3 mb-6">מדיניות שירות לקוחות</h1>
       <PolicyEditor
-        initialContent={data?.content ?? ""}
+        initialContent={data?.content ? sanitizePolicyHtml(data.content) : ""}
         updatedAt={data?.updated_at ?? null}
         updatedBy={data?.updated_by ?? null}
       />

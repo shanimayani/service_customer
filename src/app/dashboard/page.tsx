@@ -74,22 +74,34 @@ export default async function Dashboard({
   const rangeTo = rangeFrom + PAGE_SIZE - 1;
   query = query.range(rangeFrom, rangeTo);
 
-  const { data: tickets, error, count } = await query;
-  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
-
-  // ספירות לפי סטטוס לכותרת (מוגבל לקטגוריה של המשתמש, אם יש)
-  let statusCountsQuery = db.from("tickets").select("status");
-  if (userCategories) statusCountsQuery = statusCountsQuery.in("category", userCategories);
-  const { data: allStatuses } = await statusCountsQuery;
-  const counts: Record<string, number> = {};
-  for (const t of allStatuses ?? []) counts[t.status] = (counts[t.status] ?? 0) + 1;
+  // ספירות לפי סטטוס לכותרת (מוגבל לקטגוריה של המשתמש, אם יש) — count בלבד, בלי להוריד את כל השורות
+  const statusCountQueries = (Object.keys(STATUSES) as Status[]).map((s) => {
+    let q = db.from("tickets").select("id", { count: "exact", head: true }).eq("status", s);
+    if (userCategories) q = q.in("category", userCategories);
+    return q;
+  });
 
   // נפח שיחות נוספות שמוזגו לפניות פתוחות (לא נספרות כ"פניות" בפני עצמן)
   let callsCountQuery = db
     .from("ticket_calls")
     .select("id, tickets!inner(category)", { count: "exact", head: true });
   if (userCategories) callsCountQuery = callsCountQuery.in("tickets.category", userCategories);
-  const { count: totalCalls } = await callsCountQuery;
+
+  const [
+    { data: tickets, error, count },
+    statusCountResults,
+    { count: totalCalls },
+  ] = await Promise.all([query, Promise.all(statusCountQueries), callsCountQuery]);
+
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+
+  const counts: Record<string, number> = {};
+  let totalTickets = 0;
+  (Object.keys(STATUSES) as Status[]).forEach((s, i) => {
+    const c = statusCountResults[i].count ?? 0;
+    counts[s] = c;
+    totalTickets += c;
+  });
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
@@ -115,7 +127,7 @@ export default async function Dashboard({
           <div>
             <h1 className="text-2xl font-bold">שרות לקוחות - פרקטי</h1>
             <p className="text-stone-500 text-sm mt-1">
-              {allStatuses?.length ?? 0} פניות במערכת
+              {totalTickets} פניות במערכת
               {counts.new ? ` · ${counts.new} חדשות ממתינות` : ""}
               {totalCalls ? ` · ${totalCalls} שיחות נוספות מוזגו לפניות פתוחות` : ""}
             </p>
