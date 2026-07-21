@@ -167,6 +167,7 @@ export async function processIncomingEmail(db: Db, parsed: ParsedMail, uid: numb
       category,
       status: "new",
       source: "email",
+      call_summary: body,
     })
     .select("id")
     .single();

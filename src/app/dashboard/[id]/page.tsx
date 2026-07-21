@@ -135,6 +135,11 @@ export default async function TicketPage({
                 נקלט אוטומטית מ-Genie
               </span>
             )}
+            {ticket.source === "email" && (
+              <span className="text-xs text-sky-700 bg-sky-100 px-2 py-0.5 rounded-full ring-1 ring-sky-200">
+                נוצר אוטומטית ממייל
+              </span>
+            )}
           </div>
           <p className="bg-stone-50 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
             {ticket.call_summary ?? "אין סיכום לשיחה זו."}
