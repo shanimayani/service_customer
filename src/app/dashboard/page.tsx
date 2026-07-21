@@ -94,6 +94,9 @@ export default async function Dashboard({
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex justify-end items-center gap-3 mb-2">
+        <Link href="/dashboard/policy" className="text-sm text-stone-500 hover:text-stone-800 underline">
+          מדיניות שירות לקוחות
+        </Link>
         {!userCategories && (
           <Link href="/dashboard/staff" className="text-sm text-stone-500 hover:text-stone-800 underline">
             ניהול צוות
