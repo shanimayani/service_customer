@@ -173,7 +173,7 @@ export async function processIncomingEmail(db: Db, parsed: ParsedMail, uid: numb
     .single();
   if (tickErr || !ticket) throw new Error(`ticket insert failed: ${tickErr?.message}`);
 
-  await recordInboundEmail(db, ticket.id, parsed, inboundMessageId, `✉️ פנייה נפתחה ממייל מ-${from}:\n${body}`);
+  await recordInboundEmail(db, ticket.id, parsed, inboundMessageId, `✉️ פנייה נפתחה ממייל מ-${from}`);
   return "created";
 }
 
